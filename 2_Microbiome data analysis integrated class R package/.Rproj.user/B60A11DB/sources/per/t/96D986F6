@@ -1,0 +1,27 @@
+{
+    "id": "96D986F6",
+    "path": "G:/Shared_Folder/Seq_Fast_project/JGG_summ_project/pipeline/phyloseq/pipeline_1_phyloseq.Rmd",
+    "project_path": "pipeline/phyloseq/pipeline_1_phyloseq.Rmd",
+    "type": "r_markdown",
+    "hash": "3314511666",
+    "contents": "",
+    "dirty": false,
+    "created": 1620025918176.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "66,7",
+        "scrollLine": "0",
+        "last_setup_crc32": ""
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1623304312,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1623304310868,
+    "read_only": false,
+    "read_only_alternatives": []
+}

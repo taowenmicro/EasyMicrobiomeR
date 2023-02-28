@@ -1,0 +1,58 @@
+
+path = "./pipeline"
+dir.create(path)
+
+
+phypath = paste(path,"/phyloseq",sep = "")
+dir.create(phypath)
+
+
+BiocManager::install("WGCNA")
+library(WGCNA)
+devtools::install_github("wch/gcookbook")
+
+
+microbiome.path = paste(path,"/microbiome",sep = "")
+dir.create(microbiome.path)
+
+microbiome.path = paste(path,"/MicrobiomeAnalystR",sep = "")
+dir.create(microbiome.path)
+
+
+microbiome.path = paste(path,"/animalcules",sep = "")
+dir.create(microbiome.path)
+
+
+
+microbiome.path = paste(path,"/microeco",sep = "")
+dir.create(microbiome.path)
+
+
+#pacman 管理R包，瑞国不存在可以直接安装
+library(pacman)
+
+pacman::p_load(phyloseq, metacoder, pryr, biomformat, RColorBrewer, ggplot2, gplots, Cairo, igraph,
+               BiocParallel, randomForest, metagenomeSeq, MASS, DESeq2, vegan, RJSONIO, ggfortify, pheatmap, xtable, genefilter,
+               data.table, reshape, stringr, ape, grid, gridExtra, splitstackshape, edgeR, globaltest, R.utils, viridis, ggrepel,
+               ppcor)
+
+BiocManager::install('metacoder')
+BiocManager::install('pryr')
+
+
+BiocManager::install('metagenomeSeq')
+BiocManager::install('globaltest')
+library(metagenomeSeq)
+
+devtools::install_github("cran/ppcor")
+devtools::install_github("kylebittinger/qiimer")
+devtools::install_github("kylebittinger/qiimer")
+
+install.packages("./Tax4Fun-master/", repos = NULL, type = "source")
+
+
+devtools::install_github("xia-lab/MicrobiomeAnalystR", build = TRUE, build_opts = c("--no-resave-data", "--no-manual"))
+
+
+
+library(MicrobiomeAnalystR)

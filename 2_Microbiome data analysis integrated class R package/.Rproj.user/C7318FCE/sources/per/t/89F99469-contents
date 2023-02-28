@@ -1,0 +1,285 @@
+---
+title: "phyloseq"
+author: "Tao Wen(文涛)"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    theme: cerulean
+    highlight: haddock
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    code_fold: show
+  word_document:
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = T, echo=T, comment="#>", message=F, warning=F,
+	fig.align="center", fig.width=7, fig.height=5, dpi=150)
+```
+
+
+
+## introduction
+
+phyloseq：使用R语言分析微生物群落(microbiome census data) 目前对微生物群落的分析有许多挑战：使用生态学，遗传学，系统发育学，网络分析等方法对不同类型的微生物群落数据进行整合，可视化分析(visualization and testing)。微生物群落数据本身可能来源广泛，例如：人体微生物，土壤，海面及其海水，污水处理厂，工业设施等; 因此，不同来源微生物群落就其实验设计和科学问题可能有非常大的差异。phyloseq软件包是一个对在聚类OTU后的微生物群落（数据包括：OTU表格，系统发育树，OTU注释信息）进行下游系统发育等分析的综合性工具，集成了微生物群落数据导入，存储，分析和出图等功能。该软件包利用R中的许多工具进行生态学和系统发育分析(vegan, ade4, ape, picante)，同时还使用先进/灵活的图形系统（ggplot2）轻松的对系统发育数据绘制发表级别的图表。phyloseq使用S4类的系统将所有相关的系统发育测序数据存储为单个实验级对象，从而更容易共享数据并重现分析。通常，phyloseq寻求促进使用R进行OTU聚类的高通量系统发育测序数据的有效探索和可重复分析。
+
+## pipeline-phyloseq
+
+基于phyloseq分析微生物组数据和传统方式不同，S4对象的使用给phyloseq处理微生物组数据带来了方便，但是也有门槛了，比如构建phyloseq对象。
+
+### 构造phyloseq对象
+
+phyloseq包含五个内容，分别是OTU表格，物种注释表格，样本分组文件，进化树文件和代表序列文件。其中OTU表格和物种注释文件要求格式为矩阵，样本分组文件要求为数据框，进化树格式为RWK，代表序列为fa文件。
+
+下满个构造phyloseq对象。
+
+```{R}
+library(ggplot2)
+library(phyloseq)
+library(ggClusterNet)# github：taowenmicro/ggCLusterNet
+
+
+```
+
+### 准备数据-构建phyloseq对象
+
+本次数据来源于刘永鑫老师的研究，发表于XXX。这里存储在github，直接运行下方代码即可直接下载和再导入
+
+```{R}
+
+# metadata = read.delim("https://raw.githubusercontent.com/taowenmicro/R-_function/main/metadata.tsv",row.names = 1)
+# otutab = read.delim("https://raw.githubusercontent.com/taowenmicro/R-_function/main/otutab.txt", row.names=1)
+# taxonomy = read.table("https://raw.githubusercontent.com/taowenmicro/R-_function/main/taxonomy.txt", row.names=1,header = T)
+# tree  = read_tree("https://raw.githubusercontent.com/taowenmicro/R-_function/main/otus.tree")
+# library(Biostrings)
+# rep = readDNAStringSet("https://raw.githubusercontent.com/taowenmicro/R-_function/main/otus.fa")
+# 
+# ps = phyloseq(sample_data(metadata),
+#               otu_table(as.matrix(otutab), taxa_are_rows=TRUE),
+#               tax_table(as.matrix(taxonomy)), phy_tree(tree),refseq(rep)
+#               )
+
+data(ps)
+
+```
+
+
+### 对群落数据进行基本描述和分析
+
+
+```{R}
+#统计OTU数量
+ntaxa(ps)
+
+# 统计样品数量
+nsamples(ps)
+
+# 查看样品名称
+sample_names(ps)[1:5]
+
+# 查看物种分类等级
+rank_names(ps)
+# 查看分组文件表头信息
+sample_variables(ps)
+
+# 部分可视化OTU表格
+otu_table(ps)[1:5, 1:5]
+
+# 部分可视化tax注释表格
+tax_table(ps)[1:5, 1:4]
+
+# 查看进化树文件
+phy_tree(ps)
+```
+
+### 数据清洗和标准化
+
+```{R}
+#-基于样本-----去除序列量比较少的样本
+ps <- prune_samples(sample_sums(ps) >=2000,ps);ps
+#--基于样本----去除低丰度OTU，这里去除全部read为0的OTU
+ps = filter_taxa(ps, function(x) sum(x ) > 0 , TRUE)
+
+```
+
+### alpha多样性分析
+
+
+```{R}
+path = "./pipeline/01.phyloseq/"
+
+p0 <- plot_richness(ps, x="Group", color="Group", measures=c("Chao1", "Observed")) 
+
+p0$layers[[2]] = NULL # 去除误差线
+# 添加箱型图
+p0 <- p0  + geom_boxplot() + theme_bw()
+p0 
+ggsave("./pipeline/01.phyloseq/Fig1_alpha.pdf",p0,width = 5,height = 4)
+ggsave("./pipeline/01.phyloseq/Fig1_alpha.png",p0,width = 5,height = 4)
+
+
+
+```
+
+### beta多样性-排序分析可视化
+
+```{R}
+ps_rela = transform_sample_counts(ps, function(x) 1E6 * x/sum(x))
+ord <- ordinate(ps_rela, "NMDS", "bray")
+ord
+
+p1 = plot_ordination(ps, ord, type="samples", color="Group", title="Ordination") + theme_bw()
+p1
+ggsave("./pipeline/01.phyloseq/Fig2_ordination.png",p1,width = 4.5,height = 4)
+ggsave("./pipeline/01.phyloseq/Fig2_ordination.pdf",p1,width = 4.5,height = 4)
+
+```
+
+### 微生物物种组成分析
+
+堆叠柱状图在不同分类水平按照不同分组展示微生物的丰度信息，遗憾的是这个函数如果可以展示高丰度的几十个微生物，并且将其他微生物合并在一起作为others就好了。
+
+
+```{R}
+
+library(tidyverse)
+ps_rela = transform_sample_counts(ps, function(x) x/sum(x))
+
+#--相对丰都标准化后展示全部OTU-使用门水平着色。
+p2 <- plot_bar(ps_rela, fill="Phylum") + theme_bw()+
+  scale_color_binned()
+
+#--展示部分感兴趣的微生物
+gp.ch = subset_taxa(ps_rela, Phylum == "Chlamydiae")
+plot_bar(gp.ch, fill="Genus") + theme_bw()
+p = plot_bar(gp.ch, x="Group", fill="Genus")+ theme_bw()
+
+ggsave("./pipeline/01.phyloseq/Fig3_Chlamydiae_abundance_bar.png",p,width =4,height = 5)
+ggsave("./pipeline/01.phyloseq/Fig3_Chlamydiae_abundance_bar.pdf",p,width = 4,height = 5)
+
+
+plot_bar(gp.ch, "Group", fill="Genus", facet_grid=~Family)
+
+ggsave("./pipeline/01.phyloseq/Fig3_Phylum_abundance_bar.png",p2,width = 8,height = 5)
+ggsave("./pipeline/01.phyloseq/Fig3_Phylum_abundance_bar.pdf",p2,width = 8,height = 5)
+
+
+
+
+```
+
+### 热图展示微生物的丰度信息
+
+
+```{R}
+ps_rela = transform_sample_counts(ps, function(x) x/sum(x))
+gpt <- subset_taxa(ps_rela, Kingdom=="Bacteria")
+gpt <- prune_taxa(names(sort(taxa_sums(ps),TRUE)[1:30]), gpt)
+#默认从OTU水平展示丰度热图
+p = plot_heatmap(gpt, sample.label="Group") 
+#--该函数可以使用排序方法对行和列进行排序分析，并且按照结构进行顺序安排。
+p3 <- plot_heatmap(gpt, "NMDS", "bray", "Group", "Family") +
+  scale_fill_gradientn(colours =colorRampPalette(RColorBrewer::brewer.pal(4,"Set3"))(60))
+p3
+
+ggsave("./pipeline/01.phyloseq/Fig4_Family_high_abundance_heatmap.png",p3,width = 6,height = 6)
+
+ggsave("./pipeline/01.phyloseq/Fig4_Family_high_abundance_heatmap.pdf",p3,width = 6,height = 6)
+
+
+```
+
+### 进化树可视化
+
+```{R}
+# ?plot_tree
+p4 <- plot_tree(gpt,  color="Group", label.tips="taxa_names", ladderize="left",size="abundance", base.spacing=0.1) + 
+  scale_size_continuous()
+p4
+plot_tree(gpt,  color="Group", label.tips="taxa_names", ladderize="left",size="abundance", base.spacing=0.08) + coord_polar(theta="y") +
+  scale_size_continuous()
+
+ggsave("./pipeline/01.phyloseq/Fig5_phytree_high_abundance_point.pdf",p4,width = 8,height = 8)
+ggsave("./pipeline/01.phyloseq/Fig5_phytree_high_abundance_point.png",p4,width = 8,height = 8)
+
+```
+
+
+### 微生物网络分析
+
+```{R}
+
+myTaxa = names(sort(taxa_sums(ps), decreasing = TRUE)[1:50])
+ps1 = prune_taxa(myTaxa, ps)
+ps1
+
+p5 <- plot_net(ps1,type = "taxa",maxdist = 0.6,color = "Phylum",
+               laymeth = "circle" 
+               )
+p5
+plot_net(laymeth='list')
+
+ggsave("./pipeline/01.phyloseq/Fig6_Micro_network.pdf",p5,width = 7,height = 5.5)
+ggsave("./pipeline/01.phyloseq/Fig6_Micro_network.png",p5,width = 7,height = 5.5)
+```
+
+
+
+### phyloseq&DEsep2:差异分析
+
+
+```{R}
+library(DESeq2)
+# gm_mean = function(x, na.rm=TRUE){
+#   exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))
+# }
+
+diagdds = phyloseq_to_deseq2(ps, ~ Group)
+## converting counts to integer mode
+# calculate geometric means prior to estimate size factors
+gm_mean = function(x, na.rm=TRUE){
+  exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))
+}
+geoMeans = apply(counts(diagdds), 1, gm_mean)
+diagdds = estimateSizeFactors(diagdds, geoMeans = geoMeans)
+diagdds = DESeq(diagdds, fitType="local")
+
+res = results(diagdds, cooksCutoff = FALSE)
+alpha = 0.01
+sigtab = res[which(res$padj < alpha), ]
+sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(ps)[rownames(sigtab), ], "matrix"))
+head(sigtab)
+
+theme_set(theme_bw())
+scale_fill_discrete <- function(palname = "Set1", ...) {
+    scale_fill_brewer(palette = palname, ...)
+}
+# Phylum order
+x = tapply(sigtab$log2FoldChange, sigtab$Phylum, function(x) max(x))
+x = sort(x, TRUE)
+sigtab$Phylum = factor(as.character(sigtab$Phylum), levels=names(x))
+# Genus order
+x = tapply(sigtab$log2FoldChange, sigtab$Genus, function(x) max(x))
+x = sort(x, TRUE)
+sigtab$Genus = factor(as.character(sigtab$Genus), levels=names(x))
+p = ggplot(sigtab, aes(x=Genus, y=log2FoldChange, color=Phylum)) + geom_point(size=6) + 
+  theme(axis.text.x = element_text(angle = -90, hjust = 0, vjust=0.5))
+
+ggsave("./pipeline/01.phyloseq/Fig7_Desep2.pdf",p,width = 7,height = 5)
+ggsave("./pipeline/01.phyloseq/Fig7_Desep2.png",p,width = 7,height = 5)
+
+
+```

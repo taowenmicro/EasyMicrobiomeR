@@ -1,0 +1,28 @@
+{
+    "id": "123CE835",
+    "path": "E:/Shared_Folder/Seq_Fast_project/R03_R语言在微生物生态学中中的应用/微生物组分析的最佳实践/coding/5_phylo_analysis_Micro.R",
+    "project_path": "coding/5_phylo_analysis_Micro.R",
+    "type": "r_source",
+    "hash": "1115692037",
+    "contents": "",
+    "dirty": false,
+    "created": 1676465578519.0,
+    "source_on_save": false,
+    "relative_order": 6,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "103,0",
+        "scrollLine": "97",
+        "docOutlineVisible": "1",
+        "docOutlineSize": "127"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1676467401,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1676467401147,
+    "read_only": false,
+    "read_only_alternatives": []
+}

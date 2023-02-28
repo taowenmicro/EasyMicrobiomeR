@@ -1,0 +1,71 @@
+library(microeco)
+
+data(dataset)
+data(env_data_16S)
+t1 <- trans_nullmodel$new(dataset, filter_thres = 0.0005, add_data = env_data_16S)
+## ------------------------------------------------
+## Method `trans_nullmodel$cal_mantel_corr`
+## ------------------------------------------------
+t1$cal_mantel_corr(use_env = "pH")
+## ------------------------------------------------
+## Method `trans_nullmodel$plot_mantel_corr`
+## ------------------------------------------------
+t1$plot_mantel_corr()
+## ------------------------------------------------
+## Method `trans_nullmodel$cal_betampd`
+## ------------------------------------------------
+t1$cal_betampd(abundance.weighted = TRUE)
+
+## ------------------------------------------------
+## Method `trans_nullmodel$cal_betamntd`
+## ------------------------------------------------
+t1$cal_betamntd(abundance.weighted = TRUE)
+## ------------------------------------------------
+## Method `trans_nullmodel$cal_ses_betampd`
+## ------------------------------------------------
+# only run 50 times for the example; default 1000
+t1$cal_ses_betampd(runs = 50, abundance.weighted = TRUE)
+## ------------------------------------------------
+## Method `trans_nullmodel$cal_ses_betamntd`
+## ------------------------------------------------
+# only run 50 times for the example; default 1000
+t1$cal_ses_betamntd(runs = 50, abundance.weighted = TRUE, exclude.conspecifics = FALSE)
+## ------------------------------------------------
+## Method `trans_nullmodel$cal_rcbray`
+## ------------------------------------------------
+# only run 50 times for the example; default 1000
+t1$cal_rcbray(runs = 50)
+## ------------------------------------------------
+## Method `trans_nullmodel$cal_process`
+## ------------------------------------------------
+t1$cal_process(use_betamntd = TRUE)
+## ------------------------------------------------
+## Method `trans_nullmodel$cal_NRI`
+## ------------------------------------------------
+# only run 50 times for the example; default 999
+t1$cal_NRI(null.model = "taxa.labels", abundance.weighted = FALSE, runs = 50)
+96 trans_venn
+## ------------------------------------------------
+## Method `trans_nullmodel$cal_NTI`
+## ------------------------------------------------
+# only run 50 times for the example; default 999
+t1$cal_NTI(null.model = "taxa.labels", abundance.weighted = TRUE, runs = 50)
+## ------------------------------------------------
+## Method `trans_nullmodel$cal_Cscore`
+## ------------------------------------------------
+## Not run:
+t1$cal_Cscore(normalise = FALSE)
+t1$cal_Cscore(by_group = "Group", normalise = FALSE)
+## End(Not run)
+## ------------------------------------------------
+## Method `trans_nullmodel$cal_tNST`
+## ------------------------------------------------
+## Not run:
+t1$cal_tNST(group = "Group", dist.method = "bray", output.rand = TRUE, SES = TRUE)
+## End(Not run)
+## ------------------------------------------------
+## Method `trans_nullmodel$cal_tNST_test`
+## ------------------------------------------------
+## Not run:
+t1$cal_tNST_test()
+## End(Not run)

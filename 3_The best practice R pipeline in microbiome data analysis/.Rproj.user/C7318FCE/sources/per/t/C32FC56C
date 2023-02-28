@@ -1,0 +1,28 @@
+{
+    "id": "C32FC56C",
+    "path": "E:/Shared_Folder/Seq_Fast_project/R03_R语言在微生物生态学中中的应用/微生物组分析的最佳实践/微生物组分析最佳实战用图.R",
+    "project_path": "微生物组分析最佳实战用图.R",
+    "type": "r_source",
+    "hash": "3575435063",
+    "contents": "",
+    "dirty": false,
+    "created": 1676259573256.0,
+    "source_on_save": true,
+    "relative_order": 3,
+    "properties": {
+        "tempName": "Untitled2",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "9,65",
+        "scrollLine": "0",
+        "docOutlineVisible": "1"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1676448364,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1676448364959,
+    "read_only": false,
+    "read_only_alternatives": []
+}

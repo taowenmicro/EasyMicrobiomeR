@@ -1,0 +1,237 @@
+---
+title: "MicrobiotaProcess"
+author: "wentao"
+date: '2023-01-02'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup, include = F}
+knitr::opts_chunk$set(
+  collapse = T, echo=T, comment="#>", message=F, warning=F,
+	fig.align="center", fig.width=5, fig.height=3, dpi=150)
+```
+
+### 安装R包
+
+```{R}
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install("MicrobiotaProcess",force = TRUE)
+
+```
+
+
+
+```{R}
+library(ggplot2)
+library(DT)
+library(tidyverse)
+library(phyloseq)
+library(ggtree)
+library(treeio)
+library(tidytree)
+library(MicrobiotaProcess)
+
+```
+
+
+### 数据导入
+
+
+```{R}
+
+
+# import data from dada2 pipeline.
+seqtabfile <- system.file("extdata", "seqtab.nochim.rds", package="MicrobiotaProcess")
+seqtab <- readRDS(seqtabfile)
+taxafile <- system.file("extdata", "taxa_tab.rds",package="MicrobiotaProcess")
+seqtab <- readRDS(seqtabfile)
+taxa <- readRDS(taxafile)
+# the seqtab and taxa are output of dada2
+sampleda <- system.file("extdata", "mouse.time.dada2.txt", package="MicrobiotaProcess")
+ps_dada2 <- import_dada2(seqtab=seqtab, taxatab=taxa, sampleda=sampleda)
+ps_dada2
+
+# import data from qiime2 pipeline
+otuqzafile <- system.file("extdata", "table.qza", package="MicrobiotaProcess")
+taxaqzafile <- system.file("extdata", "taxa.qza", package="MicrobiotaProcess")
+mapfile <- system.file("extdata", "metadata_qza.txt", package="MicrobiotaProcess")
+ps_qiime2 <- import_qiime2(otuqza=otuqzafile, taxaqza=taxaqzafile, mapfilename=mapfile)
+
+
+```
+
+
+### alpha稀释曲线
+
+```{R}
+
+set.seed(1024)
+p_rare <- ggrarecurve(obj=ps_dada2, 
+                      indexNames=c("Observe","Chao1","ACE"), 
+                      chunks=300) +
+  theme(legend.spacing.y=unit(0.02,"cm"),
+        legend.text=element_text(size=6))
+p_rare
+
+
+```
+
+
+
+
+```{R}
+
+
+
+alphaobj <- get_alphaindex(ps_dada2)
+head(as.data.frame(alphaobj))
+p_alpha <- ggbox(alphaobj, geom="violin", factorNames="time") + 
+  scale_fill_manual(values=c("#2874C5", "#EABF00"))+
+  theme(strip.background = element_rect(colour=NA, fill="grey"))
+p_alpha
+
+```
+
+
+
+
+```{R}
+
+
+pcares <- get_pca(obj=ps_dada2, method="hellinger")
+# Visulizing the result
+pcaplot <- ggordpoint(obj=pcares, biplot=TRUE, speciesannot=TRUE,
+                      factorNames=c("time"), ellipse=TRUE) +
+  scale_colour_manual(values=c("#2874C5", "#EABF00")) +
+  scale_fill_manual(values=c("#2874C5", "#EABF00"))
+pcaplot
+
+
+pcoares <- get_pcoa(obj=ps_dada2, distmethod="euclidean", method="hellinger")
+# Visualizing the result
+pcoaplot <- ggordpoint(obj=pcoares, biplot=TRUE, speciesannot=TRUE,
+                       factorNames=c("time"), ellipse=TRUE) +
+  scale_colour_manual(values=c("#2874C5", "#EABF00")) +
+  scale_fill_manual(values=c("#2874C5", "#EABF00"))
+pcoaplot
+
+```
+
+
+
+
+```{R}
+
+
+hcsample <- get_clust(obj=ps_dada2, distmethod="euclidean",
+                      method="hellinger", hclustmethod="average")
+# rectangular layout
+clustplot1 <- ggclust(obj=hcsample,
+                      layout = "rectangular",
+                      pointsize=1,
+                      fontsize=0,
+                      factorNames=c("time")) +
+  scale_color_manual(values=c("#2874C5", "#EABF00")) +
+  theme_tree2(legend.position="right",
+              plot.title = element_text(face="bold", lineheight=25,hjust=0.5))
+clustplot1
+# circular layout
+clustplot2 <- ggclust(obj=hcsample,
+                      layout = "circular",
+                      pointsize=1,
+                      fontsize=2,
+                      factorNames=c("time")) +
+  scale_color_manual(values=c("#2874C5", "#EABF00")) +
+  theme(legend.position="right")
+clustplot2
+
+
+
+
+
+```
+
+
+
+
+```{R}
+
+
+data(kostic2012crc)
+kostic2012crc
+#datatable(sample_data(kostic2012crc), options=list(scrollX=TRUE, scrollY="400px", scrollCollapse=TRUE))
+kostic2012crc <- phyloseq::rarefy_even_depth(kostic2012crc,rngseed=1024)
+table(sample_data(kostic2012crc)$DIAGNOSIS)
+
+set.seed(1024)
+diffres <- diff_analysis(obj=kostic2012crc, classgroup="DIAGNOSIS",
+                         mlfun="lda",
+                         filtermod="fdr",
+                         firstcomfun = "kruskal.test",
+                         firstalpha=0.05,
+                         strictmod=TRUE,
+                         secondcomfun = "wilcox.test",
+                         subclmin=3,
+                         subclwilc=TRUE,
+                         secondalpha=0.01, 
+                         lda=3)
+diffres
+
+
+diffcladeplot <- ggdiffclade(obj=diffres,
+                             alpha=0.3, size=0.2, 
+                             skpointsize=0.6,
+                             taxlevel=3,
+                             settheme=FALSE, 
+                             setColors=FALSE) +
+  scale_fill_manual(values=c("#00AED7", "#FD9347"))+
+  guides(color = guide_legend(keywidth = 0.1,
+                              keyheight = 0.6,
+                              order = 3, 
+                              ncol=1)) + 
+  theme(panel.background=element_rect(fill=NA),
+        legend.position="right",
+        plot.margin=margin(0,0,0,0),
+        legend.spacing.y = unit(0.02, "cm"),
+        legend.title=element_text(size=7),
+        legend.text=element_text(size=6),
+        legend.box.spacing=unit(0.02,"cm"))
+diffcladeplot
+
+
+
+```
+
+
+
+
+```{R}
+
+
+
+library(MicrobiotaProcess)
+library(SummarizedExperiment)
+data(mouse.time.mpse)
+assays(mouse.time.mpse)
+## List of length 1
+## names(1): Abundance
+mouse.time.mpse %<>% mp_rrarefy()
+assays(mouse.time.mpse)
+## List of length 2
+## names(2): Abundance RareAbundance
+# the alpha index will add into colData when action = 'add'
+mouse.time.mpse %<>% 
+mp_cal_alpha(.abundance = RareAbundance, action = "add")
+print(mouse.time.mpse, n=4) 
+
+
+
+
+```
+

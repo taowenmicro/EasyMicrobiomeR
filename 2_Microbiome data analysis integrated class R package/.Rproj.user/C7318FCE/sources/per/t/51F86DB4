@@ -1,0 +1,27 @@
+{
+    "id": "51F86DB4",
+    "path": "E:/Shared_Folder/Seq_Fast_project/R03_R语言在微生物生态学中中的应用/全部代码整理/2_Microbiome data analysis integrated class R package/pipeline/06.EasyAmplicon/pipeline.6.Amplicon.Rmd",
+    "project_path": "pipeline/06.EasyAmplicon/pipeline.6.Amplicon.Rmd",
+    "type": "r_markdown",
+    "hash": "2833527228",
+    "contents": "",
+    "dirty": false,
+    "created": 1677158224098.0,
+    "source_on_save": false,
+    "relative_order": 7,
+    "properties": {
+        "chunk_output_type": "console",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "6,19",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1677158247,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1677158247555,
+    "read_only": false,
+    "read_only_alternatives": []
+}

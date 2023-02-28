@@ -1,0 +1,28 @@
+{
+    "id": "A13FF459",
+    "path": "E:/Shared_Folder/Seq_Fast_project/R语言在微生物生态学中中的应用/coding/pipeline/phyloseq/pipeline_1_phyloseq.Rmd",
+    "project_path": "pipeline/phyloseq/pipeline_1_phyloseq.Rmd",
+    "type": "r_markdown",
+    "hash": "1168551868",
+    "contents": "",
+    "dirty": false,
+    "created": 1632715701787.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "158,29",
+        "scrollLine": "145",
+        "last_setup_crc32": "DFD53B8Bc3b02105",
+        "chunk_output_type": "console"
+    },
+    "folds": "0|3|7|0|\n9|22|14|0|\n16|27|25|0|\n38|15|41|0|\n52|6|58|0|\n64|6|80|0|\n113|6|119|0|\n171|6|178|0|\n180|10|187|0|\n188|15|229|0|\n232|6|239|0|\n",
+    "lastKnownWriteTime": 1632718120,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1632718119556,
+    "read_only": false,
+    "read_only_alternatives": []
+}
