@@ -1,9 +1,0 @@
-
-data("GlobalPatterns")
-gp.ch = subset_taxa(GlobalPatterns, Phylum == "Chlamydiae")
-plot_bar(gp.ch)
-plot_bar(gp.ch, fill="Genus")
-plot_bar(gp.ch, x="SampleType", fill="Genus")
-plot_bar(gp.ch, "SampleType", fill="Genus", facet_grid=~Family)
-# See additional examples in the plot_bar online tutorial. Link above.
-
