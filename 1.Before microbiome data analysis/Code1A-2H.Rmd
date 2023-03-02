@@ -1,0 +1,546 @@
+---
+title: "Using R in microbial analysis"
+author: "Tao Wen(文涛)"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    theme: cerulean
+    highlight: haddock
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    code_fold: show
+  word_document:
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = T, echo=T, comment="#>", message=F, warning=F,
+	fig.align="center", fig.width=7, fig.height=5, dpi=150)
+```
+
+
+# Title
+
+
+## 1 Introduction
+
+
+
+## 2 Before microbiome data analysis
+
+
+### Microbial community data preparation
+
+### visualization in R language
+
+
+
+```{R}
+
+```
+
+#### Code 1A（Example 1）
+
+如何导入微生物组数据
+
+```{R}
+library(phyloseq)
+library(Biostrings)
+# ?read.delim
+# ?read.table
+# ?read.csv
+library(ape)
+# ?read.tree
+library(ggtree)
+# ?read.tree
+library(phyloseq)
+# ?read_tree
+library(Biostrings)
+# ?readDNAStringSet
+
+otu = read.delim("../data/otutab.txt",header = T,row.names = 1)
+head(otu)
+metadata = read.delim("../data/metadata.tsv",row.names = 1)
+taxonomy = read.table("../data/taxonomy.txt", row.names=1,header = T)
+head(taxonomy)
+tree  = read_tree("../data/otus.tree")
+rep = readDNAStringSet("../data/otus.fa")
+rep
+```
+
+
+#### Code 1B（Example 2）
+
+基础包对微生物组数据处理
+
+
+```{R}
+#--循环+sum统计测序深度
+A= c()
+for (i in 1:dim(otu)[2]) {
+  B = sum(otu[,i])
+  A = c(A,B)
+}
+names(A) = colnames(otu)
+A#--可使用函数colSums(otu)替代
+
+#-计算物种相对丰度
+otu2 = as.matrix(otu)
+norm = otu2/A
+
+#使用base中的apply家族函数
+apply(otu,2,sum)
+
+```
+
+####  Code 1C（Example 3）
+
+
+示例二：plyr包处理微生物组数据
+
+```{R}
+library(plyr)
+
+otu = read.delim("../data/otutab.txt",header = T,row.names = 1)
+tax = read.delim("../data/taxonomy.txt",header = T,row.names = 1)
+dat = cbind(otu,tax)
+#-指定列计算
+ddply(dat,.(Phylum),summarize,meanWT1 = mean(WT1))
+#-应用于每一列
+ddply(dat,.(Phylum),colwise(mean))
+
+```
+
+
+
+####  Code 1D（Example 4）
+
+
+reshape2数据融合
+
+```{R}
+library(reshape2)
+otu = read.delim("./data/otutab.txt",header = T,row.names = 1)
+head(otu)
+otu$ID = row.names(otu)
+dat <- melt(otu)
+head(dat)
+```
+
+
+####  Code 1E（Example 5）
+
+Example 5
+
+dplyr数据处理 和基于tidyverse风格的编程
+
+```{R}
+library(tidyverse)
+otu = read.delim("../data/otutab.txt",header = T,row.names = 1)
+tax = read.delim("../data/taxonomy.txt",header = T,row.names = 1)
+map= read.delim("../data/metadata.tsv",row.names = 1) 
+map$ID = row.names(map)
+head(map)
+colnames(map)[6] = "Spe"
+
+otu2 = t(as.matrix(otu)) %>% as.data.frame()
+otu2$ID = row.names(otu2)
+tax$taxid = row.names(tax)
+head(tax)
+
+data = map %>% as.tibble() %>%
+  inner_join(otu2,by=  "ID") %>% 
+  gather( taxa, count, starts_with("ASV_")) %>%
+  inner_join(tax,by = c("taxa" = "taxid") )
+data
+#---随机森林建模
+
+library(randomForest)
+get_importance <- function(x){
+  rf <- randomForest(x[,3:ncol(x)], as.factor(x$Group), importance = T)
+  imps <- as.data.frame(rf$importance)
+  imps$variable <- row.names(imps)
+  # names(imps)[1] <- "PercIncMSE"
+  as_tibble(imps)
+}
+
+imps <- data %>% 
+  # filter(Compartment != "Bulk Soil" & Compartment != "Rhizoplane") %>% 
+  dplyr::select(Group,count, taxa, ID) %>% 
+  spread(taxa, count, fill = 0) %>% # 列表转化为数据，空白的地方填充0
+  nest() %>% 
+  mutate(imp = map(data, ~ get_importance(.)))
+
+top_otus <- imps %>% 
+  unnest(imp) %>% # tibble钟折叠的imp数据框展开分析
+  # group_by(Compartment, Site) %>% 
+  top_n(85, MeanDecreaseAccuracy) # 提取每个模型前85个个重要OTU
+
+```
+
+
+####  Code 2A（Example 6）
+
+Example 6
+
+微生物组数据可视化
+
+第一部分：使用ggplot2包可视化alpha多样性
+
+```{R}
+source("E:\\Shared_Folder\\Function_local\\R_function\\micro/alpha-diversity.R")
+index = c("Shannon","Inv_Simpson","Pielou_evenness","Simpson_evenness" ,"Richness" ,"Chao1","ACE" )
+alp = alpha(ps = ps,inde="Shannon",group = "Group",Plot = TRUE )
+index= alp
+sel = c(match("Inv_Simpson",colnames(index)),
+        match("Pielou_evenness",colnames(index)),
+        match("Simpson_evenness",colnames(index)),
+        match("Richness",colnames(index)),
+        match("Chao1",colnames(index)),
+        match("ACE",colnames(index)),
+        match("Shannon",colnames(index))
+)
+n = length(sel) + 3
+data = cbind(data.frame(ID = 1:length(index$Group),group = index$Group),index[sel])
+head(data)
+result = EasyStat::MuiKwWlx2(data = data,num = c(3:(n -1)))
+
+result1 = EasyStat::FacetMuiPlotresultBox(data = data,num = c(3:(n -1)),
+                                          result = result,
+                                          sig_show ="abc",ncol = 3 )
+p1_1 = result1[[1]] + 
+  ggplot2::guides(fill = guide_legend(title = NULL)) 
+p1_1
+
+```
+
+第二部分，使用ggplot2包可视化alpha稀释曲线
+
+
+
+```{R}
+rare <- mean(phyloseq::sample_sums(ps))/10
+source("E:\\Shared_Folder\\Function_local\\R_function\\micro\\alpha_rare_all.R",encoding = "utf-8")
+result = alpha_rare_all(ps = ps, group = "Group",
+                        method = "Richness",
+                        start = 100, step = rare)
+p2_1 <- result[[1]] +
+  guides(fill = guide_legend(title = NULL))
+p2_1
+
+result[[4]]
+```
+
+第三部分，使用ggplot2可视化排序分析结果
+
+```{R}
+source("E:\\Shared_Folder\\Function_local\\R_function\\micro/BetaDiv.R")
+source("E:\\Shared_Folder\\Function_local\\R_function\\micro/MicroTest.R")
+source("E:\\Shared_Folder\\Function_local\\R_function\\micro/pairMicroTest.R")
+result = BetaDiv(ps = ps, group = "Group", dist = "bray",
+                method = "PCoA", Micromet = "anosim", 
+                pvalue.cutoff = 0.05,
+                pair = T)
+result[[1]] 
+```
+
+
+
+第四部分，使用ggplot2包绘制微生物群落分布物种堆叠柱状图
+
+```{R}
+library(tidyverse)
+# detach("package:Hmisc")
+source("E:\\Shared_Folder\\Function_local\\R_function\\micro/barMainplot.R")
+result = barMainplot(ps = ps,
+                     j = "Phylum",
+                     label = FALSE,
+                     sd = FALSE,
+                     Top = 10)
+p4_1 <- result[[1]] + 
+  scale_fill_hue()
+p4_1
+p4_2  <- result[[3]] +
+  scale_fill_hue()
+p4_2
+```
+####  Code 2B（Example 7）
+
+Example 7
+
+使用ggplot2扩展R包ggtern绘制三元图
+
+```{R}
+ps_rela = phyloseq::transform_sample_counts(ps,
+                                            function(x) x / sum(x) );ps_rela 
+otu = ggClusterNet::vegan_otu(ps_rela) %>% as.data.frame()
+#数据分组
+iris.split <- split(otu,as.factor(as.factor(phyloseq::sample_data(ps)$Group)))
+#数据分组计算平均值
+iris.apply <- lapply(iris.split,function(x)colSums(x[]))
+# 组合结果
+iris.combine <- do.call(rbind,iris.apply)
+ven2 = t(iris.combine) %>% as.data.frame()
+
+head(ven2)
+A <- combn(colnames(ven2),3)
+ven2$mean = rowMeans(ven2)
+tax = ggClusterNet::vegan_tax(ps)
+otutax = cbind(ven2,tax)
+head(otutax)
+otutax$Phylum[otutax$Phylum == ""] = "Unknown"
+i= 1
+x = A[1,i]
+y = A[2,i]
+z = A[3,i]
+p <- ggtern::ggtern(data=otutax,aes_string(x = x,y=y,z=z,color = "Phylum",size ="mean" ))+geom_point() + theme_void()
+p
+```
+
+#### Code 2C（Example 8add）
+
+Example 8
+
+
+#### Code 2D（Example 8）
+
+
+使用ggplot2扩展R包ggtree绘制进化树
+
+```{R}
+library(ggtreeExtra)
+library(ggtree)
+
+tax = ps %>% vegan_tax() %>%
+  as.data.frame()
+head(tax)
+tax = remove_rankID(tax) %>%as.matrix()
+tax[is.na(tax)] = "Unknown"
+tax[tax == " "] = "Unknown"
+tax_table(ps) = as.matrix(tax)
+
+alltax = ps %>%
+  ggClusterNet::filter_OTU_ps(150) %>%
+  ggClusterNet::vegan_tax() %>%
+  as.data.frame()
+alltax$OTU = row.names(alltax)
+head(alltax)
+trda <- MicrobiotaProcess::convert_to_treedata(alltax)
+p0 <- ggtree::ggtree(trda, layout="circular",
+                     size=0.2, xlim=c(30,NA)) +
+  geom_tippoint(color = "blue")
+p0
+```
+
+#### Code 2E（Example 9）
+
+Example 9
+
+使用ggplot2扩展包绘制韦恩图
+
+```{R}
+source("E:\\Shared_Folder\\Function_local\\R_function\\micro/Ven.Upset.gg.R")
+library(ggVennDiagram)
+res = Ven.Upset(ps =  ps,
+                group = "Group",
+                N = 0.5,
+                size = 3)
+
+p1 = res[[1]]
+p1
+p2 = res[[2]]
+p2
+```
+
+#### Code 2F（Example 10）
+
+Example 10
+
+```{R}
+library(pheatmap)
+
+otu = ps %>% filter_OTU_ps(20) %>% vegan_otu() %>%
+  as.data.frame()
+
+pheatmap(otu)
+pheatmap(otu, kmeans_k = 2)
+pheatmap(otu, scale = "row", clustering_distance_rows = "correlation")
+pheatmap(otu, color = colorRampPalette(c("navy", "white", "firebrick3"))(50))
+
+
+```
+
+#### Code 2G（Example 11）
+
+Example 11
+
+```{R}
+
+ps_rela = phyloseq::transform_sample_counts(ps, function(x) x / sum(x) );ps_rela 
+ps_P <- ps_rela %>%
+  ggClusterNet::tax_glom_wt( rank = "Phylum") 
+ps_P
+otu_P = as.data.frame((ggClusterNet::vegan_otu(ps_P)))
+head(otu_P)
+tax_P = as.data.frame(ggClusterNet::vegan_tax(ps_P))
+
+sub_design <- as.data.frame(phyloseq::sample_data(ps_P))
+count2 =   otu_P
+#数据分组
+iris.split <- split(count2,as.factor(sub_design$Group))
+#数据分组计算平均值
+iris.apply <- lapply(iris.split,function(x)colSums(x[]))
+# 组合结果
+iris.combine <- do.call(rbind,iris.apply)
+ven2 = t(iris.combine)
+# head(ven2)
+lev = "Phylum"
+
+Taxonomies <- ps %>%
+  ggClusterNet::tax_glom_wt(rank = "Phylum") %>% 
+  phyloseq::transform_sample_counts(function(x) {x/sum(x)} )%>% 
+  phyloseq::psmelt() %>%
+  #filter(Abundance > 0.05) %>%
+  dplyr::arrange( Phylum)
+iris_groups<- dplyr::group_by(Taxonomies, Phylum)
+ps0_sum <- dplyr::summarise(iris_groups, mean(Abundance), sd(Abundance))
+ps0_sum[is.na(ps0_sum)] <- 0
+head(ps0_sum)
+colnames(ps0_sum) = c("ID","mean","sd")
+
+
+ps0_sum <- dplyr::arrange(ps0_sum,desc(mean))
+ps0_sum$mean <- ps0_sum$mean *100
+ps0_sum <- as.data.frame(ps0_sum)
+head(ps0_sum)
+top_P = ps0_sum$ID[1:10];top_P
+
+### 开始进一步合并过滤
+otu_P = as.data.frame(t(otu_P))
+otu_tax = merge(ven2,tax_P,by = "row.names",all = F)
+dim(otu_tax)
+otu_tax[,lev] = as.character(otu_tax[,lev])
+otu_tax[,lev][is.na(otu_tax[,lev])] = "others"
+
+i = 1
+for (i in 1:nrow(otu_tax)) {
+  if(otu_tax[,lev] [i] %in% top_P){otu_tax[,lev] [i] = otu_tax[,lev] [i]}
+  
+  else if(!otu_tax[,lev] [i] %in% top_P){otu_tax[,lev] [i] = "others"}
+  
+}
+
+otu_tax[,lev] = as.factor(otu_tax[,lev])
+head(otu_tax)
+
+otu_mean = otu_tax[as.character(unique(sub_design$Group))]
+head(otu_mean)
+row.names(otu_mean) = row.names(otu_tax)
+iris.split <- split(otu_mean,as.factor(otu_tax[,lev]))
+#数据分组计算平均值
+iris.apply <- lapply(iris.split,function(x)colSums(x[]))
+# 组合结果
+iris.combine <- do.call(rbind,iris.apply)
+mer_otu_mean = t(iris.combine)
+
+head(mer_otu_mean )
+
+
+# mer_otu_mean = t(mer_otu_mean)
+
+
+# library(statnet)
+# library(circlize)
+# library(RColorBrewer)#调色板调用包
+mi_sam = RColorBrewer::brewer.pal(9,"Set1")
+mi_tax = colorRampPalette(RColorBrewer::brewer.pal(9,"Set3"))(length(row.names(mer_otu_mean)))
+# library("scales")
+# show_col(mi_sam )
+# show_col(mi_tax)
+# circlize::CELL_META
+
+grid.col = NULL
+#这里设置样品颜色
+grid.col[as.character(unique(sub_design$Group))] = mi_sam
+#设置群落中物种水平颜色
+# grid.col[colnames(mer_otu_mean)] = mi_tax
+grid.col[row.names(mer_otu_mean)] = mi_tax
+
+
+#gap.degree修改间隔，不同小块之间的间隔
+circlize::circos.par(gap.degree = c(rep(2, nrow(mer_otu_mean)-1), 10, rep(2, ncol(mer_otu_mean)-1), 10),
+                     start.degree = 180)
+circlize::chordDiagram(mer_otu_mean,
+                       directional = F,
+                       diffHeight = 0.06,
+                       grid.col = grid.col, 
+                       reduce = 0,
+                       transparency = 0.5, 
+                       annotationTrack =c("grid", "axis"),
+                       preAllocateTracks = 2
+)
+
+circlize::circos.track(track.index = 1, panel.fun = function(x, y) {
+  circlize::circos.text(circlize::CELL_META$xcenter, circlize::CELL_META$ylim[1], circlize::CELL_META$sector.index,
+                        facing = "clockwise", niceFacing = TRUE, adj = c(0, 0.5))}, bg.border = NA)# here set bg.border to NA is important
+circlize::circos.clear()
+dev.off()
+# grid.col = NULL
+# #这里设置样品颜色
+# grid.col[as.character(unique(sub_design$Group))] = mi_sam
+# #设置群落中物种水平颜色
+# # grid.col[colnames(mer_otu_mean)] = mi_tax
+# grid.col[row.names(mer_otu_mean)] = mi_tax
+# 
+# #gap.degree修改间隔，不同小块之间的间隔
+# circlize::circos.par(gap.degree = c(rep(2, nrow(mer_otu_mean)-1), 10, rep(2, ncol(mer_otu_mean)-1), 10),
+#                      start.degree = 180)
+# circlize::chordDiagram(mer_otu_mean,directional = F,
+#                        reduce = 0,
+#                        diffHeight = 0.06,grid.col = grid.col, transparency = 0.5, annotationTrack =c("grid", "axis"),
+#                        preAllocateTracks = 2
+# )
+# 
+# circlize::circos.track(track.index = 1, panel.fun = function(x, y) {
+#   circlize::circos.text(circlize::CELL_META$xcenter, circlize::CELL_META$ylim[1], circlize::CELL_META$sector.index,
+#                         facing = "clockwise", niceFacing = TRUE, adj = c(0, 0.5))}, bg.border = NA) # here set bg.border to NA is important
+# circlize::circos.clear()
+# dev.off()
+```
+
+
+#### Code 2H（Example 12）
+
+Example 12
+
+patchwork拼图
+
+```{R}
+library(ggplot2)
+library(patchwork)
+p1 <- ggplot(mtcars) + 
+  geom_point(aes(mpg, disp)) + 
+  ggtitle('Plot 1')
+p2 <- ggplot(mtcars) + 
+  geom_boxplot(aes(gear, disp, group = gear)) + 
+  ggtitle('Plot 2')
+p3 <- ggplot(mtcars) + 
+  geom_point(aes(hp, wt, colour = mpg)) + 
+  ggtitle('Plot 3')
+
+p1+p2+p3
+```
+

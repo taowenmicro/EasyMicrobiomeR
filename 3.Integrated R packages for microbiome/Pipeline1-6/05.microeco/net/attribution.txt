@@ -1,0 +1,9 @@
+Vertex	23
+Edge	23
+Average_degree	2
+Average_path_length	4.45454545454545
+Network_diameter	7
+Clustering_coefficient	0
+Density	0.0909090909090909
+Heterogeneity	0.426401432711221
+Centralization	0.0909090909090909

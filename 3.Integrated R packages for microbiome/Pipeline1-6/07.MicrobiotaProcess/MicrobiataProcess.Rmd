@@ -1,0 +1,220 @@
+---
+title: "pipeline_4_animalcules"
+author: "wentao"
+date: "2021/5/14"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{css include=FALSE}
+ pre code,pre,code {
+ white-space:pre!important;
+ overflow-x: scroll!important; 
+} 
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.width = 10,
+                      fig.height = 5,
+                      fig.align = "center",
+                      warning = FALSE,
+                      message = FALSE
+                      
+                      )
+```
+
+```{R}
+# if (! requireNamespace("remotes", quietly=TRUE)){
+#     install.packages("remotes")
+# }
+# remotes::install_github("YuLab-SMU/MicrobiotaProcess")
+```
+
+
+```{R}
+library(tidyverse)
+library(ggplot2)
+library(phyloseq)
+library(MicrobiotaProcess)
+library(phyloseq)
+library(ggClusterNet)
+
+```
+
+#---alpha多样性稀释曲线
+
+运行时间很长，需要等几分钟。
+
+```{R}
+
+data(ps)
+
+?ggrarecurve
+ps
+set.seed(1024)
+p_rare <- ggrarecurve(obj=ps,
+                      indexNames=c("Observe","Chao1","ACE"),
+                      chunks=2000) +
+          theme(legend.spacing.y=unit(0.02,"cm"),
+                legend.text=element_text(size=6))
+p_rare
+
+```
+
+### alpha多样性指标计算
+
+```{R}
+# 首先计算各个样品的alpha多样性值。
+set.seed(1024)
+alphaobj <- get_alphaindex(ps)
+head(as.data.frame(alphaobj))
+
+```
+
+
+
+
+```{R}
+# 然后再用ggbox来进行可视化
+p_alpha <- ggbox(alphaobj, geom="violin", factorNames="Group") +
+            # scale_fill_manual(values=c("#2874C5", "#EABF00"))+
+           theme(strip.background = element_rect(colour=NA, fill="grey"))
+p_alpha
+
+```
+
+### beta多样性排序
+
+```{R}
+
+pcares <- get_pca(obj=ps, method="hellinger")
+# Visulizing the result
+pcaplot <- ggordpoint(obj=pcares, biplot=TRUE, speciesannot=TRUE,
+                      factorNames=c("Group"), ellipse=TRUE)
+pcaplot
+```
+
+
+```{R}
+
+pcoares <- get_pcoa(obj=ps, distmethod="euclidean", method="hellinger")
+ # Visualizing the result
+pcoaplot <- ggordpoint(obj=pcoares, biplot=TRUE, speciesannot=TRUE,
+                      factorNames=c("Group"), ellipse=TRUE) 
+pcoaplot
+```
+
+### 微生物组样本聚类分析
+
+```{R}
+
+hcsample <- get_clust(obj=ps, distmethod="euclidean",
+                      method="hellinger", hclustmethod="average")
+# rectangular layout
+library(ggtree)
+clustplot1 <- ggclust(obj=hcsample,
+                      layout = "rectangular",
+              pointsize=1,
+                      fontsize=0,
+                      factorNames=c("Group")) +
+              # scale_color_manual(values=c("#2874C5", "#EABF00")) +
+          theme_tree2(legend.position="right",
+                          plot.title = element_text(face="bold", lineheight=25,hjust=0.5))
+clustplot1
+
+
+```
+
+### 微生物组物种丰度堆叠柱状图
+
+```{R}
+
+# 提取各个分类物种水平的数据然后进行可视化。
+phytax <- get_taxadf(obj=ps, taxlevel=2)
+phybar <- ggbartax(obj=phytax) +
+      xlab(NULL) + ylab("relative abundance (%)")
+phybar
+```
+
+
+```{R}
+
+#绝对丰度， facetNames控制分组分面。
+phybar2 <- ggbartax(obj=phytax, facetNames="Group", count=TRUE) +
+          xlab(NULL) + ylab("abundance")
+phybar2
+```
+
+### LDA 判别生物标记物选择
+
+
+```{R}
+
+set.seed(1024)
+ps_sam  =phyloseq::rarefy_even_depth(ps,rngseed=1024)
+
+diffres <- diff_analysis(obj= ps_sam, 
+                         class="Group",
+                         mlfun="lda",
+                         filtermod="fdr",
+                         firstcomfun = "kruskal.test",
+                         firstalpha=0.1,
+                         strictmod=TRUE,
+                         secondcomfun = "wilcox.test",
+                         subclmin=3,
+                         subclwilc=TRUE,
+                         secondalpha=0.01,
+                         lda=0.5)
+diffres
+
+
+```
+
+
+
+
+```{R}
+plotes_ab <- ggdiffbox(obj=diffres, box_notch=FALSE, colorlist=c("#00AED7", "#FD9347","grey80"))
+plotes_ab
+```
+
+
+
+
+```{R}
+diffcladeplot <- ggdiffclade(obj=diffres,
+                             layout="radial",
+                             alpha=0.3, size=0.2,
+                             skpointsize=0.6,
+                             taxlevel=3,
+                             settheme=FALSE,
+                             setColors=FALSE) +
+                 scale_fill_manual(values=c("#00AED7", "#FD9347","grey80"))+
+                 guides(color = guide_legend(keywidth = 0.1,
+                                             keyheight = 0.6,
+                                             order = 3,
+                                             ncol=1)) +
+                 theme(panel.background=element_rect(fill=NA),
+                       legend.position="right",
+                       plot.margin=margin(0,0,0,0),
+                       legend.spacing.y = unit(0.02, "cm"),
+                       legend.title=element_text(size=7),
+                       legend.text=element_text(size=6),
+                       legend.box.spacing=unit(0.02,"cm"))
+diffcladeplot
+
+```
+
+
+
+```{R}
+sessionInfo()
+```
+
+
+
+
