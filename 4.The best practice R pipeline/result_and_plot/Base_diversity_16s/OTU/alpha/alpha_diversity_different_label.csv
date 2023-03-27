@@ -1,4 +1,4 @@
-"","Inv_Simpson","Pielou_evenness","Simpson_evenness","Richness","Chao1","ACE","Shannon"
-"KO","b","b","ab","b","b","b","b"
-"OE","a","a","a","a","a","a","a"
-"WT","b","b","b","b","b","b","b"
+"","Shannon","Richness","Pielou_evenness"
+"KO","b","b","b"
+"OE","a","a","a"
+"WT","ab","ab","ab"
