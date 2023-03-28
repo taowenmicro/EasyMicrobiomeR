@@ -1,82 +1,81 @@
 ---
-title: "Using R in microbial analysis"
+  title: "Using R in microbial analysis"
 author: "Tao Wen(文涛)"
 date: "`r Sys.Date()`"
 output:
   html_document:
-    df_print: paged
-    theme: cerulean
-    highlight: haddock
-    toc: yes
-    toc_depth: 3
-    toc_float:
-      collapsed: no
-      smooth_scroll: yes
-    code_fold: show
-  word_document:
-    toc: yes
-    toc_depth: '3'
-  pdf_document:
-    toc: yes
-    toc_depth: '3'
-editor_options: 
+  df_print: paged
+theme: cerulean
+highlight: haddock
+toc: yes
+toc_depth: 3
+toc_float:
+  collapsed: no
+smooth_scroll: yes
+code_fold: show
+word_document:
+  toc: yes
+toc_depth: '3'
+pdf_document:
+  toc: yes
+toc_depth: '3'
+editor_options:
   chunk_output_type: console
 ---
 
 
-
-```{r setup, include = FALSE}
+  ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = T, echo=T, comment="#>", message=F, warning=F,
-	fig.align="center", fig.width=7, fig.height=5, dpi=150)
+  fig.align="center", fig.width=7, fig.height=5, dpi=150)
 ```
 
 
-
 ## 3 microbial community analysis
-
-
 ### microbial community diversity analysis
-
-
 #### Code 3A（Example 13）
-Example 13
-
-alpha多样性
+##### alpha diverzity
 
 
 ```{R}
+library(phyloseq)
+library(Biostrings)
+library(ape)
+library(ggtree)
+library(phyloseq)
+library(Biostrings)
 library(vegan)
-otu = read.delim("../data/otutab.txt",header = T,row.names = 1)
-tree = read_tree("../data/otus.tree")
+otu = read.delim("./data/otutab.txt",row.names = 1)
+tree = read_tree("./data/otus.tree")
 head(otu)
 otu2 = as.data.frame(t(rrarefy(t(otu),min(colSums(otu)))))
 colSums(otu2)
 otul = decostand(t(otu),'log') %>% t()
 
 otu.alp = t(otu2)
-# Richness 
+# Richness
 observed_species <- estimateR(otu.alp)[1, ]
 # Chao 1
 Chao1  <- estimateR(otu.alp)[2, ]
 Chao1
-# ACE 
+# ACE
 ACE  <- estimateR(otu.alp)[4, ]
 ACE
 # Shannon
-Shannon <- diversity(otu.alp, index = 'shannon', base = exp(1))#以e作为底数表示方法
-Shannon <- diversity(otu.alp, index = 'shannon', base = 2) #以2作为底数表示方法
+?diversity
+Shannon <- vegan::diversity(otu.alp, index = 'shannon', base = exp(1))
+Shannon <- vegan::diversity(otu.alp, index = 'shannon', base = 2)
 Shannon
 # Simpson1
-Gini_simpson  <- diversity(otu.alp, index = 'simpson')
+Gini_simpson  <-vegan:: diversity(otu.alp, index = 'simpson')
 Gini_simpson
 #Simpson2
 simpson_index <- 1 - Gini_simpson
-# goods_coverage 
+# goods_coverage
 goods_coverage <- 1 - rowSums(otu.alp == 1) / rowSums(otu.alp)
 goods_coverage
 # PD
-library(picante) 
+library(picante)
 library(ape)
 
 PD_whole_tree <- pd(otu, tree, include.root = FALSE)[1]
@@ -86,49 +85,24 @@ PD_whole_tree
 
 
 #### Code 3B（Example 14）
-
-Example 14
-
-排序分析
-
-
 ```{R}
 library(vegan)
 library(MASS)
-otu = read.delim("../data/otutab.txt",header = T,row.names = 1)
-env = read.delim("../data/env.txt",header = T,row.names = 1)
-map = read.delim("../data/metadata.tsv",row.names = 1)
+otu = read.delim("./data/otutab.txt",row.names = 1)
+env = read.delim("./data/env.txt",row.names = 1)
+map = read.delim("./data/metadata.tsv",row.names = 1)
 head(otu)
-
-
-# RDA
-RDA <- rda(t(otu),env,scale = T)
 
 # DCA
 DCA<- decorana(otu)
-
 # CCA
 CCA <- cca(t(otu),env,scale = T)
-
 # NMDS
 dist <-vegdist(t(otu),method = "bray")
 nmds_dist <- metaMDS(dist,k =2)
-
-
-# PCA
-PCA <- prcomp(t(otu), center = T,scale = T)
-
-# # MCA
-# # install.packages("FactoMineR")
-# library(FactoMineR)
-# data(tea)
-# RES.MCA <- MCA(t(otu), graph = F,ncp =5 )
-
-
 # PCOA
 dist= vegdist(t(otu),method = "bray")
 PCOA= pcoa(dist,correction = "cailliez")
-
 # LDA
 data = t(otu)
 # head(data)
@@ -136,23 +110,14 @@ data = as.data.frame(data)
 # data$ID = row.names(data)
 data = scale(data, center = TRUE, scale = TRUE)
 model = MASS::lda(data, map$Group)
-
 # VEGDIST
 Vegan.dist = vegdist(t(otu),method = "bray")
-
 # DIST
 library(stats)
 DIST<- dist(t(otu),method = "euclidean")
 ```
 
-
-#### Code 3C（Example 15add）
-
-
-
 #### Code 3D（Example 15）
-
-聚类分析
 
 ```{R}
 # HCLUST
@@ -166,35 +131,26 @@ CLUSTER<- cluster(t(otu))
 # KMEANS
 library(factoextra)
 library(cluster)
-
-# scale(t(otu))
 set.seed(1)
-
-gap = clusGap(scale(t(otu)),FUN = kmeans,nstart = 25,K.max = 10,B = 500)
+gap = clusGap(scale(t(otu)),FUN = kmeans,nstart = 25,K.max = 10,B = 50)
 fviz_gap_stat(gap)
 KM<- kmeans(scale(t(otu)),centers =3 , nstart = 25)
 ```
 
 
 
-
 ### microbial community difference analysis
-
-
 
 #### Code 4A（Example 16）
 
-Example 16
-
-群落整体差异分析
 
 ```{R}
 library(vegan)
 library(tidyverse)
 library(ade4)
 
-otu = read.delim("../data/otutab.txt",header = T,row.names = 1)
-map= read.delim("../data/metadata.tsv",row.names = 1) 
+otu = read.delim("./data/otutab.txt",row.names = 1)
+map= read.delim("./data/metadata.tsv",row.names = 1)
 
 unif <- dist <-vegdist(t(otu),method = "bray")
 # ADONIS
@@ -207,7 +163,7 @@ dat.ano
 mrpp = vegan::mrpp(unif, map$Group)
 mrpp
 # MANTEL
-dist <- 
+dist <-
   otu %>% t() %>%
   vegan::vegdist(method="bray") %>%
   as.matrix()
@@ -224,20 +180,14 @@ vegan::mantel(dist1,dist2,method = "spearman")
 
 #### Code 4B（Example 17）
 
-Example 17
-
-差异分析
-
 ```{R}
-# devtools::install_github("taowenmicro/ggClsuterNet")
 library(ggClusterNet)
 library(phyloseq)
 #---wilcox.test
 map= sample_data(ps)
 head(map)
 id.g = map$Group %>% unique() %>% as.character() %>% combn(2)
-
-ASV_table = ps %>% 
+ASV_table = ps %>%
   scale_micro(method = "sampling") %>%
   subset_samples(Group %in% id.g[,i]) %>%
   vegan_otu() %>% t() %>%
@@ -251,31 +201,29 @@ pvals <- apply(ASV_table, 1, function(x) wilcox.test(x ~ groupings$Group, exact=
 dat <- pvals %>% as.data.frame()
 head(dat)
 colnames(dat) = "p"
-tab.d12 = dat %>% 
+tab.d12 = dat %>%
   rownames_to_column(var = "id") %>%
   dplyr::select(id,p) %>%
-  dplyr::filter( p < 0.05) %>% 
+  dplyr::filter( p < 0.05) %>%
   dplyr::rename(
     OTU = id
     # p = p
-  )  %>% 
+  )  %>%
   dplyr::mutate(group = " wilcox.test.rare")
 
 head(tab.d12)
 ```
 
+
+
 ####  Code 4C（Example 18）
 
-Example 18
-
-t.test
 
 ```{R}
 map= sample_data(ps)
 head(map)
 id.g = map$Group %>% unique() %>% as.character() %>% combn(2)
-
-ASV_table = ps %>% 
+ASV_table = ps %>%
   scale_micro(method = "sampling") %>%
   subset_samples(Group %in% id.g[,i]) %>%
   vegan_otu() %>% t() %>%
@@ -284,34 +232,28 @@ groupings <- ps %>%
   subset_samples(Group %in% id.g[,i]) %>%
   sample_data()
 groupings$ID = row.names(groupings)
-
 pvals <- apply(ASV_table, 1, function(x) t.test(x ~ groupings$Group, exact=F)$p.value)
-
 dat <- pvals %>% as.data.frame()
 head(dat)
 colnames(dat) = "p"
-
-tab.d11 = dat %>% 
+tab.d11 = dat %>%
   rownames_to_column(var = "id") %>%
   dplyr::select(id,p) %>%
-  dplyr::filter( p < 0.05) %>% 
+  dplyr::filter( p < 0.05) %>%
   dplyr::rename(
     OTU = id
     # p = p
-  )  %>% 
+  )  %>%
   dplyr::mutate(group = "t.test.rare")
 head(tab.d11)
 ```
 
+
 #### Code 4D（Example 19）
 
-Example 19
-
-edgeR
 
 ```{R}
 library(edgeR)
-
 phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
   require("edgeR")
   require("phyloseq")
@@ -329,7 +271,7 @@ phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
   taxonomy = tax_table(physeq, errorIfNULL=FALSE)
   if( !is.null(taxonomy) ){
     taxonomy = data.frame(as(taxonomy, "matrix"))
-  } 
+  }
   # Now turn into a DGEList
   y = DGEList(counts=x, group=group, genes=taxonomy, remove.zeros = TRUE, ...)
   # Calculate the normalization factors
@@ -353,29 +295,26 @@ et = exactTest(test)
 tt = topTags(et, n=nrow(test$table), adjust.method="fdr", sort.by="PValue")
 res <- tt@.Data[[1]]
 head(res)
-tab.d4 = res %>% 
+tab.d4 = res %>%
   rownames_to_column(var = "id") %>%
   dplyr::select(id,FDR) %>%
-  dplyr::filter(FDR < 0.05) %>% 
+  dplyr::filter(FDR < 0.05) %>%
   dplyr::rename(
     OTU = id,
     p = FDR
-  )  %>% 
+  )  %>%
   dplyr::mutate(group = "edgeR")
 
 head(tab.d4)
 ```
 
+
 #### Code 4E（Example 20）
 
-Example 20
-
-DESeq2
 
 ```{R}
-
 library(DESeq2)
-ASV_table = ps %>% 
+ASV_table = ps %>%
   filter_taxa(function(x) sum(x ) > 0 , TRUE) %>%
   subset_samples(Group %in% id.g[,i]) %>%
   vegan_otu() %>% t() %>%
@@ -388,35 +327,29 @@ dds <- DESeq2::DESeqDataSetFromMatrix(countData = ASV_table,
                                       colData=groupings,
                                       design = ~ Group)
 dds_res <- DESeq2::DESeq(dds, sfType = "poscounts")
-
 res <- DESeq2::results(dds_res, tidy=T, format="DataFrame")
-
 rownames(res) <- res$row
 res <- res[,-1]
 head(res)
-tab.d5 = res %>% 
+tab.d5 = res %>%
   rownames_to_column(var = "id") %>%
   dplyr::select(id,padj) %>%
-  dplyr::filter(padj < 0.05) %>% 
+  dplyr::filter(padj < 0.05) %>%
   dplyr::rename(
     OTU = id,
     p = padj
-  )  %>% 
+  )  %>%
   dplyr::mutate(group = "DESeq2")
-
 head(tab.d5)
 ```
 
+
 #### Code 4F （Example 21）
 
-Example 21
-
-
-metagennomeSeq
 
 ```{R}
 library(metagenomeSeq)
-ASV_table = ps %>% 
+ASV_table = ps %>%
   filter_taxa(function(x) sum(x ) > 0 , TRUE) %>%
   subset_samples(Group %in% id.g[,i]) %>%
   vegan_otu() %>% t() %>%
@@ -437,8 +370,6 @@ feature_data <- data.frame("ASV"=rownames(ASV_table),
                            "ASV2"=rownames(ASV_table))
 feature_data <- AnnotatedDataFrame(feature_data)
 rownames(feature_data) <- feature_data@data$ASV
-
-
 test_obj <- newMRexperiment(counts = data_list$counts, phenoData = pheno, featureData = feature_data)
 
 p <- cumNormStat(test_obj, pFlag = T)
@@ -454,28 +385,25 @@ regres <- fitFeatureModel(test_obj_norm, mod)
 res_table <- MRfulltable(regres, number = length(rownames(ASV_table)))
 head(res_table)
 
-tab.d10 = res_table %>% 
+tab.d10 = res_table %>%
   rownames_to_column(var = "id") %>%
   dplyr::select(id,adjPvalues) %>%
-  dplyr::filter(adjPvalues < 0.05) %>% 
+  dplyr::filter(adjPvalues < 0.05) %>%
   dplyr::rename(
     OTU = id,
     p = adjPvalues
-  )  %>% 
+  )  %>%
   dplyr::mutate(group = "metagenomeSeq")
 
 head(tab.d10)
 ```
 
+
 #### Code 4G（Example 22）
-
-Example 22
-
-ALDEx2
 
 ```{R}
 library(ALDEx2)
-ASV_table = ps %>% 
+ASV_table = ps %>%
   filter_taxa(function(x) sum(x ) > 0 , TRUE) %>%
   subset_samples(Group %in% id.g[,i]) %>%
   vegan_otu() %>% t() %>%
@@ -484,39 +412,36 @@ groupings <- ps %>%
   subset_samples(Group%in% id.g[,i]) %>%
   sample_data()
 groupings$ID = row.names(groupings)
-#mc.samples:一个整数。 估计基础分布时使用的蒙特卡洛样本数
-results <- aldex(reads=ASV_table, conditions = groupings$Group,
-                 mc.samples = 128,
-                 test="t", 
-                 effect=TRUE,
-                 include.sample.summary = FALSE, 
-                 verbose=T, 
-                 denom="all")
-
+results <- ALDEx2::aldex(reads=ASV_table, conditions = groupings$Group,
+                         mc.samples = 128,
+                         test="t",
+                         effect=TRUE,
+                         include.sample.summary = FALSE,
+                         verbose=T,
+                         denom="all")
 head(results)
-#使用Welchs t 检验矫正后的p值 作为显著差异的微生物
-tab.d1 = results %>% 
+
+tab.d1 = results %>%
   as.data.frame() %>%
   dplyr::filter(we.ep < 0.05) %>% rownames_to_column(var = "id") %>%
   dplyr::select(id,we.ep) %>%
   dplyr::rename(
     OTU = id,
     p = we.ep
-  ) %>% 
+  ) %>%
   dplyr::mutate(group = "Aldex2")
 
 head(tab.d1)
 
 ```
 
+
 #### Code 4H（Example 23）
 
-Example 23
-
-limma
 
 ```{R}
-ASV_table = ps %>% 
+library(edgeR)
+ASV_table = ps %>%
   filter_taxa(function(x) sum(x ) > 0 , TRUE) %>%
   subset_samples(Group %in% id.g[,i]) %>%
   vegan_otu() %>% t() %>%
@@ -529,7 +454,10 @@ DGE_LIST <- DGEList(ASV_table)
 ### do normalization
 ### Reference sample will be the sample with the highest read depth
 ### check if upper quartile method works for selecting reference
-Upper_Quartile_norm_test <- calcNormFactors(DGE_LIST, method="upperquartile")
+
+Upper_Quartile_norm_test <- edgeR::calcNormFactors(DGE_LIST,method="upperquartile")
+
+
 summary_upper_quartile <- summary(Upper_Quartile_norm_test$samples$norm.factors)[3]
 if(is.na(summary_upper_quartile) | is.infinite(summary_upper_quartile)){
   message("Upper Quartile reference selection failed will use find sample with largest sqrt(read_depth) to use as reference")
@@ -538,9 +466,9 @@ if(is.na(summary_upper_quartile) | is.infinite(summary_upper_quartile)){
   fileConn<-file(args[[4]])
   writeLines(c("Used max square root read depth to determine reference sample"), fileConn)
   close(fileConn)
-  
+
 }else{
-  DGE_LIST_Norm <- calcNormFactors(DGE_LIST, method="TMM")
+  DGE_LIST_Norm <- edgeR::calcNormFactors(DGE_LIST, method="TMM")
 }
 
 ## make matrix for testing
@@ -555,14 +483,14 @@ fit <- eBayes(fit)
 res <- topTable(fit, coef=2, n=nrow(DGE_LIST_Norm), sort.by="none")
 head(res)
 
-tab.d7 = res %>% 
+tab.d7 = res %>%
   rownames_to_column(var = "id") %>%
   dplyr::select(id,adj.P.Val) %>%
-  dplyr::filter(adj.P.Val < 0.05) %>% 
+  dplyr::filter(adj.P.Val < 0.05) %>%
   dplyr::rename(
     OTU = id,
     p = adj.P.Val
-  )  %>% 
+  )  %>%
   dplyr::mutate(group = "limma.voom.TMM")
 
 head(tab.d7)
@@ -572,22 +500,23 @@ head(tab.d7)
 
 #### Code 4I（Example 24）
 
-Example 24
- ancom
-
 ```{R}
+library(ANCOMBC)
+# remotes::install_github("FrederickHuangLin/ANCOMBC")
+
 main_var <- colnames(groupings)[1]
 p_adj_method = "BH"
 alpha=0.05
 adj_formula=NULL
 rand_formula=NULL
-res <- ANCOM(feature_table = feature_table, 
-             meta_data = metadata,
-             struc_zero = struc_zero, 
-             main_var = main_var,
-             p_adj_method = p_adj_method,
-             alpha=alpha, adj_formula = adj_formula, 
-             rand_formula = rand_formula
+
+res <-ANCOMBC::ANCOMBC(feature_table = feature_table,
+                       meta_data = metadata,
+                       struc_zero = struc_zero,
+                       main_var = main_var,
+                       p_adj_method = p_adj_method,
+                       alpha=alpha, adj_formula = adj_formula,
+                       rand_formula = rand_formula
 )
 
 dat = res$out
@@ -595,26 +524,26 @@ head(dat)
 dat$detected_0.6
 ANCOM.value = "detected_0.6"
 tab.d2 = dat %>% dplyr::select(taxa_id,detected_0.6) %>%
-  dplyr::filter(detected_0.6 == TRUE) %>% 
+  dplyr::filter(detected_0.6 == TRUE) %>%
   dplyr::rename(
     OTU = taxa_id,
     p = detected_0.6
-  )  %>% 
+  )  %>%
   dplyr::mutate(group = "ANCOMII")
 
-# 不同阈值的显著差异的数量不同，随着阈值越来越大，显著的OTU也越来越少
-# write.table(res$out, file= "./ANCOM.txt", quote=FALSE, sep="\t", col.names = NA)
 ```
 
 
 #### Code 4J （Example 25）
 
-Example 25
-
-corcob
-
 ```{R}
 library(corncob)
+library(phyloseq)
+library(ggClusterNet)
+map= sample_data(ps)
+head(map)
+id.g = map$Group %>% unique() %>% as.character() %>% combn(2)
+i = 1
 phylo <- ps %>%
   subset_samples(Group %in% id.g[,i])
 
@@ -632,30 +561,26 @@ head(dat)
 colnames(dat) = "p_fdr"
 dat$p = results$p
 
-tab.d3 = dat %>% 
+tab.d3 = dat %>%
   rownames_to_column(var = "id") %>%
   dplyr::select(id,p_fdr) %>%
-  dplyr::filter(p_fdr < 0.05) %>% 
+  dplyr::filter(p_fdr < 0.05) %>%
   dplyr::rename(
     OTU = id,
     p = p_fdr
-  )  %>% 
+  )  %>%
   dplyr::mutate(group = "corncob")
 
 head(tab.d3)
+
 ```
 
 
 
 #### Code 4K（Example 26）
 
-
-Example 26
-
-Maaslin2
-
 ```{R}
-ASV_table = ps %>% 
+ASV_table = ps %>%
   filter_taxa(function(x) sum(x ) > 0 , TRUE) %>%
   subset_samples(Group %in% id.g[,i]) %>%
   vegan_otu() %>% t() %>%
@@ -664,12 +589,9 @@ groupings <- ps %>%
   subset_samples(Group%in% id.g[,i]) %>%
   sample_data()
 groupings$ID = row.names(groupings)
+
 library(Maaslin2)
-# 会生成一个文件夹
-# 一个稀释后的或未经稀释的特征表
-# 反正弦平方根变换(arcsine square-root transformation)。
-# 没有指定随机效应，并关闭了默认的标准化。该函数将线性模型拟合到指定样本分组上每个特征的转换丰度，
-# 使用Wald检验进行显著性检验，并输出BH FDR校正的p值
+
 ASV_table <- data.frame(t(ASV_table), check.rows = F, check.names = F, stringsAsFactors = F)
 
 row.names(groupings) = groupings$ID
@@ -681,31 +603,316 @@ fit_data <- Maaslin2(
 
 dat = fit_data$results
 head(dat)
-tab.d9 = dat %>% 
+tab.d9 = dat %>%
   # rownames_to_column(var = "id") %>%
   dplyr::select(feature,qval) %>%
-  dplyr::filter(qval < 0.05) %>% 
+  dplyr::filter(qval < 0.05) %>%
   dplyr::rename(
     OTU = feature,
     p = qval
-  )  %>% 
+  )  %>%
   dplyr::mutate(group = "Maaslin2")
 head(tab.d9)
-
-write.table(dat, file="Maaslin2.txt", quote=F, sep="\t", col.names = NA)
 ```
 
 
 #### Code 4L（Example 27）
 
-Example 27
-
-ANCOM-II
 
 ```{R}
-#-第二种：ANCOM-II
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro\\ancom_v2.1.R")
-ASV_table = ps %>% 
+library(exactRankTests)
+library(exactRankTests)
+library(nlme)
+library(dplyr)
+library(ggplot2)
+library(compositions)
+
+# OTU table should be a matrix/data.frame with each feature in rows and sample in columns.
+# Metadata should be a matrix/data.frame containing the sample identifier.
+
+# Data Pre-Processing
+feature_table_pre_process = function(feature_table, meta_data, sample_var, group_var = NULL,
+                                     out_cut = 0.05, zero_cut = 0.90, lib_cut, neg_lb){
+  feature_table = data.frame(feature_table, check.names = FALSE)
+  meta_data = data.frame(meta_data, check.names = FALSE)
+  # Drop unused levels
+  meta_data[] = lapply(meta_data, function(x) if(is.factor(x)) factor(x) else x)
+  # Match sample IDs between metadata and feature table
+  sample_ID = intersect(meta_data[, sample_var], colnames(feature_table))
+  feature_table = feature_table[, sample_ID]
+  meta_data = meta_data[match(sample_ID, meta_data[, sample_var]), ]
+
+  # 1. Identify outliers within each taxon
+  if (!is.null(group_var)) {
+    group = meta_data[, group_var]
+    z = feature_table + 1 # Add pseudo-count (1)
+    f = log(z); f[f == 0] = NA; f = colMeans(f, na.rm = T)
+    f_fit = lm(f ~ group)
+    e = rep(0, length(f)); e[!is.na(group)] = residuals(f_fit)
+    y = t(t(z) - e)
+
+    outlier_check = function(x){
+      # Fitting the mixture model using the algorithm of Peddada, S. Das, and JT Gene Hwang (2002)
+      mu1 = quantile(x, 0.25, na.rm = T); mu2 = quantile(x, 0.75, na.rm = T)
+      sigma1 = quantile(x, 0.75, na.rm = T) - quantile(x, 0.25, na.rm = T); sigma2 = sigma1
+      pi = 0.75
+      n = length(x)
+      epsilon = 100
+      tol = 1e-5
+      score = pi*dnorm(x, mean = mu1, sd = sigma1)/((1 - pi)*dnorm(x, mean = mu2, sd = sigma2))
+      while (epsilon > tol) {
+        grp1_ind = (score >= 1)
+        mu1_new = mean(x[grp1_ind]); mu2_new = mean(x[!grp1_ind])
+        sigma1_new = sd(x[grp1_ind]); if(is.na(sigma1_new)) sigma1_new = 0
+        sigma2_new = sd(x[!grp1_ind]); if(is.na(sigma2_new)) sigma2_new = 0
+        pi_new = sum(grp1_ind)/n
+
+        para = c(mu1_new, mu2_new, sigma1_new, sigma2_new, pi_new)
+        if(any(is.na(para))) break
+
+        score = pi_new * dnorm(x, mean = mu1_new, sd = sigma1_new)/
+          ((1-pi_new) * dnorm(x, mean = mu2_new, sd = sigma2_new))
+
+        epsilon = sqrt((mu1 - mu1_new)^2 + (mu2 - mu2_new)^2 +
+                         (sigma1 - sigma1_new)^2 + (sigma2 - sigma2_new)^2 + (pi - pi_new)^2)
+        mu1 = mu1_new; mu2 = mu2_new; sigma1 = sigma1_new; sigma2 = sigma2_new; pi = pi_new
+      }
+
+      if(mu1 + 1.96 * sigma1 < mu2 - 1.96 * sigma2){
+        if(pi < out_cut){
+          out_ind = grp1_ind
+        }else if(pi > 1 - out_cut){
+          out_ind = (!grp1_ind)
+        }else{
+          out_ind = rep(FALSE, n)
+        }
+      }else{
+        out_ind = rep(FALSE, n)
+      }
+      return(out_ind)
+    }
+    out_ind = matrix(FALSE, nrow = nrow(feature_table), ncol = ncol(feature_table))
+    out_ind[, !is.na(group)] = t(apply(y, 1, function(i)
+      unlist(tapply(i, group, function(j) outlier_check(j)))))
+
+    feature_table[out_ind] = NA
+  }
+
+  # 2. Discard taxa with zeros  >=  zero_cut
+  zero_prop = apply(feature_table, 1, function(x) sum(x == 0, na.rm = T)/length(x[!is.na(x)]))
+  taxa_del = which(zero_prop >= zero_cut)
+  if(length(taxa_del) > 0){
+    feature_table = feature_table[- taxa_del, ]
+  }
+
+  # 3. Discard samples with library size < lib_cut
+  lib_size = colSums(feature_table, na.rm = T)
+  if(any(lib_size < lib_cut)){
+    subj_del = which(lib_size < lib_cut)
+    feature_table = feature_table[, - subj_del]
+    meta_data = meta_data[- subj_del, ]
+  }
+
+  # 4. Identify taxa with structure zeros
+  if (!is.null(group_var)) {
+    group = factor(meta_data[, group_var])
+    present_table = as.matrix(feature_table)
+    present_table[is.na(present_table)] = 0
+    present_table[present_table != 0] = 1
+
+    p_hat = t(apply(present_table, 1, function(x)
+      unlist(tapply(x, group, function(y) mean(y, na.rm = T)))))
+    samp_size = t(apply(feature_table, 1, function(x)
+      unlist(tapply(x, group, function(y) length(y[!is.na(y)])))))
+    p_hat_lo = p_hat - 1.96 * sqrt(p_hat * (1 - p_hat)/samp_size)
+
+    struc_zero = (p_hat == 0) * 1
+    # Whether we need to classify a taxon into structural zero by its negative lower bound?
+    if(neg_lb) struc_zero[p_hat_lo <= 0] = 1
+
+    # Entries considered to be structural zeros are set to be 0s
+    struc_ind = struc_zero[, group]
+    feature_table = feature_table * (1 - struc_ind)
+
+    colnames(struc_zero) = paste0("structural_zero (", colnames(struc_zero), ")")
+  }else{
+    struc_zero = NULL
+  }
+
+  # 5. Return results
+  res = list(feature_table = feature_table, meta_data = meta_data, structure_zeros = struc_zero)
+  return(res)
+}
+
+# ANCOM main function
+ANCOM = function(feature_table, meta_data, struc_zero = NULL, main_var, p_adj_method = "BH",
+                 alpha = 0.05, adj_formula = NULL, rand_formula = NULL, ...){
+  # OTU table transformation:
+  # (1) Discard taxa with structural zeros (if any); (2) Add pseudocount (1) and take logarithm.
+  if (!is.null(struc_zero)) {
+    num_struc_zero = apply(struc_zero, 1, sum)
+    comp_table = feature_table[num_struc_zero == 0, ]
+  }else{
+    comp_table = feature_table
+  }
+  comp_table = log(as.matrix(comp_table) + 1)
+  n_taxa = dim(comp_table)[1]
+  taxa_id = rownames(comp_table)
+  n_samp = dim(comp_table)[2]
+
+  # Determine the type of statistical test and its formula.
+  if (is.null(rand_formula) & is.null(adj_formula)) {
+    # Basic model
+    # Whether the main variable of interest has two levels or more?
+    if (length(unique(meta_data%>%pull(main_var))) == 2) {
+      # Two levels: Wilcoxon rank-sum test
+      tfun = exactRankTests::wilcox.exact
+    } else{
+      # More than two levels: Kruskal-Wallis test
+      tfun = stats::kruskal.test
+    }
+    # Formula
+    tformula = formula(paste("x ~", main_var, sep = " "))
+  }else if (is.null(rand_formula) & !is.null(adj_formula)) {
+    # Model: ANOVA
+    tfun = stats::aov
+    # Formula
+    tformula = formula(paste("x ~", main_var, "+", adj_formula, sep = " "))
+  }else if (!is.null(rand_formula)) {
+    # Model: Mixed-effects model
+    tfun = nlme::lme
+    # Formula
+    if (is.null(adj_formula)) {
+      # Random intercept model
+      tformula = formula(paste("x ~", main_var))
+    }else {
+      # Random coefficients/slope model
+      tformula = formula(paste("x ~", main_var, "+", adj_formula))
+    }
+  }
+
+  # Calculate the p-value for each pairwise comparison of taxa.
+  p_data = matrix(NA, nrow = n_taxa, ncol = n_taxa)
+  colnames(p_data) = taxa_id
+  rownames(p_data) = taxa_id
+  for (i in 1:(n_taxa - 1)) {
+    # Loop through each taxon.
+    # For each taxon i, additive log ratio (alr) transform the OTU table using taxon i as the reference.
+    # e.g. the first alr matrix will be the log abundance data (comp_table) recursively subtracted
+    # by the log abundance of 1st taxon (1st column) column-wisely, and remove the first i columns since:
+    # the first (i - 1) columns were calculated by previous iterations, and
+    # the i^th column contains all zeros.
+    alr_data = apply(comp_table, 1, function(x) x - comp_table[i, ])
+    # apply(...) allows crossing the data in a number of ways and avoid explicit use of loop constructs.
+    # Here, we basically want to iteratively subtract each column of the comp_table by its i^th column.
+    alr_data = alr_data[, - (1:i), drop = FALSE]
+    n_lr = dim(alr_data)[2] # number of log-ratios (lr)
+    alr_data = cbind(alr_data, meta_data) # merge with the metadata
+
+    # P-values
+    if (is.null(rand_formula) & is.null(adj_formula)) {
+      p_data[-(1:i), i] = apply(alr_data[, 1:n_lr, drop = FALSE], 2, function(x){
+        tfun(tformula, data = data.frame(x, alr_data, check.names = FALSE))$p.value
+      }
+      )
+    }else if (is.null(rand_formula) & !is.null(adj_formula)) {
+      p_data[-(1:i), i] = apply(alr_data[, 1:n_lr, drop = FALSE], 2, function(x){
+        fit = tfun(tformula,
+                   data = data.frame(x, alr_data, check.names = FALSE),
+                   na.action = na.omit)
+        summary(fit)[[1]][main_var, "Pr(>F)"]
+      }
+      )
+    }else if (!is.null(rand_formula)) {
+      p_data[-(1:i), i] = apply(alr_data[, 1:n_lr, drop = FALSE], 2, function(x){
+        fit = tfun(fixed = tformula,
+                   data = data.frame(x, alr_data, check.names = FALSE),
+                   random = formula(rand_formula),
+                   na.action = na.omit, ...)
+        anova(fit)[main_var, "p-value"]
+      }
+      )
+    }
+  }
+  # Complete the p-value matrix.
+  # What we got from above iterations is a lower triangle matrix of p-values.
+  p_data[upper.tri(p_data)] = t(p_data)[upper.tri(p_data)]
+  diag(p_data) = 1 # let p-values on diagonal equal to 1
+
+  # Multiple comparisons correction.
+  q_data = apply(p_data, 2, function(x) p.adjust(x, method = p_adj_method))
+
+  # Calculate the W statistic of ANCOM.
+  # For each taxon, count the number of q-values < alpha.
+  W = apply(q_data, 2, function(x) sum(x < alpha))
+
+  # Organize outputs
+  out_comp = data.frame(taxa_id, W, row.names = NULL, check.names = FALSE)
+  # Declare a taxon to be differentially abundant based on the quantile of W statistic.
+  # We perform (n_taxa - 1) hypothesis testings on each taxon, so the maximum number of rejections is (n_taxa - 1).
+  out_comp = out_comp%>%mutate(detected_0.9 = ifelse(W > 0.9 * (n_taxa -1), TRUE, FALSE),
+                               detected_0.8 = ifelse(W > 0.8 * (n_taxa -1), TRUE, FALSE),
+                               detected_0.7 = ifelse(W > 0.7 * (n_taxa -1), TRUE, FALSE),
+                               detected_0.6 = ifelse(W > 0.6 * (n_taxa -1), TRUE, FALSE))
+
+  # Taxa with structural zeros are automatically declared to be differentially abundant
+  if (!is.null(struc_zero)){
+    out = data.frame(taxa_id = rownames(struc_zero), W = Inf, detected_0.9 = TRUE,
+                     detected_0.8 = TRUE, detected_0.7 = TRUE, detected_0.6 = TRUE,
+                     row.names = NULL, check.names = FALSE)
+    out[match(taxa_id, out$taxa_id), ] = out_comp
+  }else{
+    out = out_comp
+  }
+
+  # Draw volcano plot
+  # Calculate clr
+  clr_table = apply(feature_table, 2, clr)
+  # Calculate clr mean difference
+  eff_size = apply(clr_table, 1, function(y)
+    lm(y ~ x, data = data.frame(y = y,
+                                x = meta_data %>% pull(main_var),
+                                check.names = FALSE))$coef[-1])
+
+  if (is.matrix(eff_size)){
+    # Data frame for the figure
+    dat_fig = data.frame(taxa_id = out$taxa_id, t(eff_size), y = out$W, check.names = FALSE) %>%
+      mutate(zero_ind = factor(ifelse(is.infinite(y), "Yes", "No"), levels = c("Yes", "No"))) %>%
+      gather(key = group, value = x, rownames(eff_size))
+    # Replcace "x" to the name of covariate
+    dat_fig$group = sapply(dat_fig$group, function(x) gsub("x", paste0(main_var, " = "), x))
+    # Replace Inf by (n_taxa - 1) for structural zeros
+    dat_fig$y = replace(dat_fig$y, is.infinite(dat_fig$y), n_taxa - 1)
+
+    fig = ggplot(data = dat_fig) + aes(x = x, y = y) +
+      geom_point(aes(color = zero_ind)) +
+      facet_wrap(~ group) +
+      labs(x = "CLR mean difference", y = "W statistic") +
+      scale_color_discrete(name = "Structural zero", drop = FALSE) +
+      theme_bw() +
+      theme(plot.title = element_text(hjust = 0.5), legend.position = "top",
+            strip.background = element_rect(fill = "white"))
+    fig
+  } else{
+    # Data frame for the figure
+    dat_fig = data.frame(taxa_id = out$taxa_id, x = eff_size, y = out$W) %>%
+      mutate(zero_ind = factor(ifelse(is.infinite(y), "Yes", "No"), levels = c("Yes", "No")))
+    # Replace Inf by (n_taxa - 1) for structural zeros
+    dat_fig$y = replace(dat_fig$y, is.infinite(dat_fig$y), n_taxa - 1)
+
+    fig = ggplot(data = dat_fig) + aes(x = x, y = y) +
+      geom_point(aes(color = zero_ind)) +
+      labs(x = "CLR mean difference", y = "W statistic") +
+      scale_color_discrete(name = "Structural zero", drop = FALSE) +
+      theme_bw() +
+      theme(plot.title = element_text(hjust = 0.5), legend.position = "top")
+    fig
+  }
+
+  res = list(out = out, fig = fig)
+  return(res)
+}
+ASV_table = ps %>%
   filter_taxa(function(x) sum(x ) > 200 , TRUE) %>%
   subset_samples(Group %in% id.g[,i]) %>%
   vegan_otu() %>% t() %>%
@@ -715,7 +922,7 @@ groupings <- ps %>%
   sample_data()
 groupings$ID = row.names(groupings)
 groupings$Sample <- rownames(groupings)
-prepro <- feature_table_pre_process(feature_table = ASV_table, meta_data = groupings, sample_var = 'Sample', 
+prepro <- feature_table_pre_process(feature_table = ASV_table, meta_data = groupings, sample_var = 'Sample',
                                     group_var = NULL, out_cut = 0.05, zero_cut = 0.90,
                                     lib_cut = 1000, neg_lb=FALSE)
 
@@ -730,91 +937,469 @@ struc_zero <- prepro$structure_zeros
 
 
 #### Code 5A（Example 28）
-
-Example 28
-
-寻找生物标志物
-
 ```{R}
-# LeFSe 
-source("E:/Shared_Folder/Function_local/R_function/micro/R_lefse_SAV.R",encoding = "utf-8")
+Top = 100
+p.lvl = 0.05
+lda.lvl = 1
+seed = 11
+adjust.p = F
+ps = readRDS("./data/ps_liu.rds")
+alltax = ps %>%
+  ggClusterNet::filter_OTU_ps(100) %>%
+  ggClusterNet::vegan_tax() %>%
+  as.data.frame()
+alltax$OTU = row.names(alltax)
+alltax$Kingdom = paste(alltax$Kingdom,sep = "_Rank_")
+alltax$Phylum = paste(alltax$Kingdom,alltax$Phylum,sep = "_Rank_")
+alltax$Class = paste(alltax$Phylum,alltax$Class,sep = "_Rank_")
+alltax$Order = paste(alltax$Class,alltax$Order,sep = "_Rank_")
+alltax$Family = paste(alltax$Order,alltax$Family,sep = "_Rank_")
+alltax$Genus = paste(alltax$Family,alltax$Genus,sep = "_Rank_")
+alltax$Species = paste(alltax$Genus,alltax$Species,sep = "_Rank_")
+alltax[is.na(alltax)] = "Unknown"
+trda <- MicrobiotaProcess::convert_to_treedata(alltax)
+p <- ggtree(trda, layout="circular", size=0.2, xlim=c(30,NA)) +
+  geom_point(
+    pch = 21,
+    size=3,
+    alpha=1,
+    fill = "#FFFFB3")
+p$data$lab2 <- p$data$label %>% strsplit( "_Rank_") %>%
+  sapply(function(x) x[length(x)])
+p$data$lab2   = gsub("st__","",p$data$lab2 )
+p$data$nodeSize = 1
 
-p1 <- p_base(ps,Top = 100)
-p1$data
-mytheme1 = theme_bw()
-tablda = LDA_Micro(ps = ps,
-                   Top = 100,
-                   p.lvl = 0.05,
-                   lda.lvl = 1,
-                   seed = 11, 
-                   adjust.p = F)
+otu = ps %>%
+  ggClusterNet::filter_OTU_ps(100) %>%
+  ggClusterNet::vegan_otu() %>%
+  t() %>%
+  as.data.frame()
 
-p <- lefse_bar(taxtree = tablda[[2]])
-tem = tablda[[2]]
-head(tem)
+otu_tax = merge(otu,alltax,by = "row.names",all = F)
+head(otu_tax)
+
+rank1 <- otu_tax %>%
+  dplyr::group_by(Kingdom) %>%
+  dplyr::summarise_if(is.numeric, sum, na.rm = TRUE)
+colnames(rank1)[1] = "id"
+rank1$id = paste("k__",rank1$id,sep = "")
+rank2 <- otu_tax %>%
+  dplyr::group_by(Phylum) %>%
+  dplyr::summarise_if(is.numeric, sum, na.rm = TRUE)
+colnames(rank2)[1] = "id"
+rank2$id = paste("p__",rank2$id,sep = "")
+rank3 <- otu_tax %>%
+  dplyr::group_by(Class) %>%
+  dplyr::summarise_if(is.numeric, sum, na.rm = TRUE)
+colnames(rank3)[1] = "id"
+rank3$id = paste("c__",rank3$id,sep = "")
+
+rank4 <- otu_tax %>%
+  dplyr::group_by(Order) %>%
+  dplyr::summarise_if(is.numeric, sum, na.rm = TRUE)
+colnames(rank4)[1] = "id"
+rank4$id = paste("o__",rank4$id,sep = "")
+
+rank5 <- otu_tax %>%
+  dplyr::group_by(Family) %>%
+  dplyr::summarise_if(is.numeric, sum, na.rm = TRUE)
+colnames(rank5)[1] = "id"
+rank5$id = paste("f__",rank5$id,sep = "")
+
+rank6 <- otu_tax %>%
+  dplyr::group_by(Genus) %>%
+  dplyr::summarise_if(is.numeric, sum, na.rm = TRUE)
+colnames(rank6)[1] = "id"
+rank6$id = paste("g__",rank6$id,sep = "")
+
+rank7 <- otu_tax %>%
+  dplyr::group_by(Species) %>%
+  dplyr::summarise_if(is.numeric, sum, na.rm = TRUE)
+colnames(rank7)[1] = "id"
+rank7$id = paste("s__",rank7$id,sep = "")
+
+rank8 <- otu_tax %>%
+  dplyr::group_by(OTU) %>%
+  dplyr::summarise_if(is.numeric, sum, na.rm = TRUE)
+colnames(rank8)[1] = "id"
+rank8$id = paste("st__",rank8$id,sep = "")
+all = rbind(rank1,rank2,rank3,rank4,rank5,rank6,rank7,rank8)
+
+data1 = as.data.frame(all)
+row.names(data1) = data1$id
+data1$id = NULL
+
+ps_G_graphlan = phyloseq::phyloseq(phyloseq::otu_table(as.matrix(data1),taxa_are_rows = TRUE),
+                                   phyloseq::sample_data(ps))
+ps_G_graphlan
+otu = as.data.frame((ggClusterNet::vegan_otu(ps_G_graphlan)))
+otu[otu==0] <- 1
+map = as.data.frame(phyloseq::sample_data(ps_G_graphlan))
+# otu = (otu_table)
+claslbl= map$Group %>% as.factor()
+set.seed(100)
+
+rawpvalues <- apply(otu, 2, function(x) kruskal.test(x, claslbl)$p.value);
+ord.inx <- order(rawpvalues)
+rawpvalues <- rawpvalues[ord.inx]
+clapvalues <- p.adjust(rawpvalues, method ="fdr")
+
+# p.adjust
+wil_datadf <- as.data.frame(otu[,ord.inx])
+
+ldares <- MASS::lda(claslbl~ .,data = wil_datadf)
+# ldares
+ldamean <- as.data.frame(t(ldares$means))
+ldamean
+class_no <<- length(unique(claslbl))
+ldamean$max <- apply(ldamean[,1:class_no],1,max);
+ldamean$min <- apply(ldamean[,1:class_no],1,min);
+ldamean$LDAscore <- signif(log10(1+abs(ldamean$max-ldamean$min)/2),digits=3);
+head(ldamean)
+
+a = rep("A",length(ldamean$max))
+for (i in 1:length(ldamean$max)) {
+  name =colnames(ldamean[,1:class_no])
+  a[i] = name[ldamean[,1:class_no][i,] %in% ldamean$max[i]]}
+ldamean$class = a
+
+tem1 = row.names(ldamean)
+tem1 %>% as.character()
+ldamean$Pvalues <- signif(rawpvalues[match(row.names(ldamean),names(rawpvalues))],digits=5)
+ldamean$FDR <- signif(clapvalues,digits=5)
+resTable <- ldamean
+rawNms <- rownames(resTable);
+rownames(resTable) <- gsub("`", '', rawNms);
+
+
+if (adjust.p) {
+  de.Num <- sum(clapvalues <= p.lvl & ldamean$LDAscore>=lda.lvl)
+
+} else {
+  de.Num <- sum(rawpvalues <= p.lvl & ldamean$LDAscore>=lda.lvl)
+}
+
+if(de.Num == 0){
+  current.msg <<- "No significant features were identified with given criteria.";
+}else{
+  current.msg <<- paste("A total of", de.Num, "significant features with given criteria.")
+}
+print(current.msg)
+
+ord.inx <- order(resTable$Pvalues, resTable$LDAscore)
+resTable <- resTable[ord.inx, ,drop=FALSE]
+resTable <- resTable[,c(ncol(resTable),1:(ncol(resTable)-1))]
+resTable <- resTable[,c(ncol(resTable),1:(ncol(resTable)-1))]
+
+ldamean$Pvalues[is.na(ldamean$Pvalues)] = 1
+
+if (adjust.p) {
+  taxtree = resTable[clapvalues <=p.lvl & ldamean$LDAscore>=lda.lvl,]
+} else {
+  # taxtree = resTable[ldamean$Pvalues <=p.lvl & ldamean$LDAscore>=lda.lvl,]
+  taxtree = resTable[ldamean$Pvalues <=p.lvl,]
+}
+
+colour = c('darkgreen','red',"blue","#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF")
+selececol = colour[1:length(levels(as.factor(taxtree$class)))]
+names(selececol) = levels(as.factor(taxtree$class))
+A = rep("a",length(row.names(taxtree)))
+
+for (i in 1:length(row.names(taxtree))) {
+  A[i] = selececol [taxtree$class[i]]
+}
+
+taxtree$color = A
+lefse_lists = data.frame(node=row.names(taxtree),
+                         color=A,
+                         Group = taxtree$class,
+                         stringsAsFactors = FALSE)
+taxtree$ID = row.names(taxtree)
+head(taxtree)
+taxtree$ID = gsub("_Rank_",";",taxtree$ID)
+taxtree <- taxtree %>%
+  arrange(class,LDAscore)
+taxtree$ID = factor(taxtree$ID,levels=taxtree$ID)
+taxtree$class = factor(taxtree$class,levels = unique(taxtree$class))
+
+pbar <- ggplot(taxtree) + geom_bar(aes(y =ID, x = LDAscore,fill =     class),stat = "identity") +
+  scale_fill_manual(values = unique(taxtree$color)) +
+  scale_x_continuous(limits = c(0,max(taxtree$LDAscore)*1.2))
+pbar
 ```
 
 
 #### Code 5B（Example 28）
 
-Example 29
-
-PCA 载荷矩阵
-
 ```{R}
 
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro/loadingPCA.R")
-res = loadingPCA(ps = ps %>% filter_OTU_ps(200),Top = 20)
-p = res[[1]]
+count =ps %>%
+  ggClusterNet::vegan_otu() %>% t()
+count[is.na(count)] = 0
+norm = t(t(count)/colSums(count,na=TRUE))# * 100 # normalization to total 100
+otu.pca <- stats::prcomp(t(norm), scale. = TRUE)
+
+yangpin<-otu.pca$x
+yangpin=as.data.frame(yangpin)
+yangpin$SampleType= phyloseq::sample_data(ps)$Group
+
+bianliang<-otu.pca$rotation
+bianliang=as.data.frame(bianliang)
+head(bianliang)
+dim(norm)
+index = merge(norm ,bianliang, by="row.names",all=F)
+head(index)
+row.names(index)=index$Row.names
+index$Row.names=NULL
+head(index)
+
+index$PCone = index$PC1^2
+top = index %>% arrange(desc(PCone)) %>%
+  head(20)
+top$ID  = row.names(top)
+head(top)
+
+p=ggplot(top, aes(x = PCone, y = reorder(ID,PCone)))  +
+  geom_segment(aes(yend=ID),xend=0,size=3,colour = "#1B9E77" )+
+  geom_point(size=4,pch=20, colour = "#1B9E77")+theme_bw()+
+  theme(axis.text.x = element_text(colour = "black",size = 20,face = "bold"),
+        axis.text.y = element_text(colour = "black",size = 10,face = "bold"))
 p
-dat = res[[2]]
-head(dat )
+
+
 ```
 
 
 #### Code 5C（Example 30）
-
-Example 30
-
-随机森林
-
 ```{R}
+group  = "Group"
+optimal = 20
+rfcv = FALSE
 
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro\\MicroMachine_learning.R")
-
+ps = ps %>% ggClusterNet::scale_micro()
+map = as.data.frame(phyloseq::sample_data(ps))
+#-scaleing relative abundancce#----
 mapping = as.data.frame(phyloseq::sample_data(ps))
-#--随机森林全套-如果圈图尚未显示前面几个，就设定max大一点
-result = MicroRF(ps = ps %>% filter_OTU_ps(500),
-                 group  = "Group",
-                 optimal = 20,rfcv = F,nrfcvnum = 5,
-                 min = -1,max = 5)
-#火柴图展示前二十个重要的OTU
-p <- result[[1]]
-p
+otutab = as.data.frame((ggClusterNet::vegan_otu(ps)))
+tem = colnames(otutab)
+colnames(otutab) = paste("RE",1:length(colnames(otutab)),sep = "")
 
-# 抽空补充mboost等其他机器学习
+tem2 = data.frame(ID = colnames(otutab),name = tem)
+
+otutab$group = factor(mapping$Group)
+# colnames(otutab) <- gsub("-","_",colnames(otutab))
+model_rf= randomForest::randomForest(group ~ ., data=otutab, importance=TRUE, proximity=TRUE)
+print(model_rf)
+
+Confusion_matrix <- as.data.frame(model_rf$confusion)
+Confusion_matrix$class.error <- round(Confusion_matrix$class.error,3)
+Confusion_matrix$Group = row.names(Confusion_matrix)
+
+Confusion_matrix <- dplyr::select(Confusion_matrix , Group, everything())
+
+model_Accuracy_rates <- paste(round(100-tail(model_rf$err.rate[,1],1)*100,2),"%",sep = "")
+model_Accuracy_rates = data.frame(ID = "model Accuracy rates",model_Accuracy_rates = model_Accuracy_rates)
+colnames(model_Accuracy_rates) = c("Random foreest","Fu wilt model")
+tab2 <- ggpubr::ggtexttable(Confusion_matrix, rows = NULL)
+tab1 <- ggpubr::ggtexttable(model_Accuracy_rates, rows = NULL)
+library(patchwork)
+pn <- tab1/tab2
+
+if (rfcv) {
+  result = Micro.rfcv(otu = NULL,tax = NULL,map = NULL,tree = NULL ,ps = ps_rela,group  = "Group",optimal = 20,nrfcvnum = 6)
+
+  prfcv = result[[1]]# plot rfcv
+  # result[[2]]# plotdata
+  rfcvtable = result[[3]]# table rfcv
+} else{
+  prfcv = NULL
+  rfcvtable = NULL
+}
+
+a=as.data.frame(round(randomForest::importance(model_rf), 2))
+a$id=row.names(a)
+head(a)
+
+row.names(a)  = tem
+a$id = tem
+a2<- dplyr::arrange(a, desc(MeanDecreaseAccuracy)) %>% as.data.frame()
+row.names(a2)=a2$id
+# optimal = 40
+a3=head(a2,n=optimal)
+
+OTU =  ggClusterNet::vegan_otu(ps)
+### pice mapping
+design = as.data.frame(phyloseq::sample_data(ps))
+
+#mean abundance by groups
+iris.split <- split(as.data.frame(OTU),as.factor(design$Group))
+iris.apply <- lapply(iris.split,function(x)colMeans(x,na.rm = TRUE))
+norm2 <- do.call(rbind,iris.apply)%>% # combine result
+  t()
+colnames(norm2) = paste(colnames(norm2),"mean",sep = "")
+
+ind_fal = merge(a3,norm2,by = "row.names",all = F)
+head(ind_fal)
+
+head(a3)
+p1 <- ggplot(a3, aes(x = MeanDecreaseAccuracy, y = reorder(id,MeanDecreaseAccuracy))) +
+  geom_point(size=6,pch=21,fill = "#9ACD32",color = "#9ACD32")+
+  geom_segment(aes(yend=id),xend=0,size=3,color = "#9ACD32")+
+  geom_label(aes(x =MeanDecreaseAccuracy*1.1,  label = id),size = 3) + theme_classic()
+p1
+
+a3<- dplyr::arrange(a3, desc(MeanDecreaseAccuracy))
+a3$iid = paste(1:length(a3$id))
+angle1 = 90 - 360 * ( as.numeric(a3$iid) - 0.5) /length(a3$id)
+a3$id = factor(a3$id,levels = a3$id)
+p2 = a3  %>%
+  ggplot(aes(x = factor(id), y = MeanDecreaseAccuracy ,label = id)) +
+  geom_bar(stat = 'identity', position = 'dodge',fill = "blue") +
+  # scale_fill_manual(values = mi)+
+  geom_text(hjust = 0, angle = angle1, alpha = 1) +
+  coord_polar() +
+  # ylim(c(min,max))+
+  theme_void()
+p2
+
 ```
 
 
 #### Code 5D（Example 31）
-
-Example 31
-
-ROC曲线
-三种机器学习方法评测
-
 ```{R}
 data(ps)
 ps.1 = subset_samples.wt(ps,"Group",c("WT"),T) %>%
   filter_OTU_ps(500)
 library(randomForest)
 library(caret)
-library(ROCR) ##用于计算ROC
+library(ROCR)
 library(e1071)
+MicroRoc <- function(otu = NULL,tax = NULL,map = NULL,tree = NULL,
+                     ps = NULL,group  = "Group",repnum = 5){
+
+
+  ps = ggClusterNet::inputMicro(otu,tax,map,tree,ps,group  = group)
+  mapping = as.data.frame(phyloseq::sample_data(ps))
+  otutab = as.data.frame(t(ggClusterNet::vegan_otu(ps)))
+  colnames(otutab) <- gsub("-","_",colnames(otutab))
+  test = as.data.frame(t(otutab))
+  test$group = factor(mapping$Group)
+  colnames(test) = paste("OTU",colnames(test),sep = "")
+
+  # random forest
+
+  test = dplyr::select(test,OTUgroup,everything())
+  train = test
+  folds <- createFolds(y=test[,1],k=repnum)
+  AUC =c()
+
+  max=0
+  num=0
+  fc<-as.numeric()
+  mod_pre<-as.numeric()
+  for(i in 1:repnum){
+    fold_test<-train[folds[[i]],]
+    fold_train<-train[-folds[[i]],]
+
+
+    colnames(fold_test) <- gsub("-","_",colnames(fold_test))
+    colnames(fold_train) <- gsub("-","_",colnames(fold_train))
+
+    model<-randomForest(OTUgroup~.,data=fold_train, importance=TRUE, proximity=TRUE)
+    model_pre<-predict(model,newdata = fold_test,type="prob")
+    fc<-append(fc,as.factor(fold_test$OTUgroup))
+    mod_pre<-append(mod_pre,model_pre[,2])
+  }
+
+
+  #- pick data and plot
+  pred <- prediction(mod_pre, fc)
+  perf <- performance(pred,"tpr","fpr")
+  x <- unlist(perf@x.values)
+  y <- unlist(perf@y.values)
+  plotdata <- data.frame(x,y)
+  names(plotdata) <- c("x", "y")
+  AUC[1] = paste("rf AUC:",round(performance(pred,'auc')@y.values[[1]],3),sep = " ")
+  head(plotdata)
+  g0 <- ggplot(plotdata) +
+    geom_path(aes(x = x, y = y, colour = x), size=1,color = "red") +
+    labs(x = "False positive rate", y = "Ture positive rate") + # , title ="Random Forest"
+    annotate("text", x=0.75, y=0.5, label=paste("Red: ",AUC[1],sep = ""))
+  df<-cbind(fc,as.numeric(mod_pre))
+  #-svm
+  max=0
+  num=0
+  fc<-as.numeric()
+  mod_pre<-as.numeric()
+
+  for(i in 1:repnum){
+    fold_test<-train[folds[[i]],]
+    # head(fold_test)
+    fold_train<-train[-folds[[i]],]
+    model<-svm(OTUgroup~.,data=fold_train,probability=TRUE)
+    model
+    model_pre<-predict(model,newdata = fold_test,decision.values = TRUE, probability = TRUE)
+    fc<-append(fc,as.numeric(fold_test$OTUgroup))
+    mod_pre<-append(mod_pre,as.numeric(attr(model_pre, "probabilities")[,2]))
+  }
+
+  pred <- prediction(mod_pre, fc)
+  perf <- performance(pred,"tpr","fpr")
+  x <- unlist(perf@x.values)
+  y <- unlist(perf@y.values)
+  plotdata <- data.frame(x,y)
+  names(plotdata) <- c("x", "y")
+  AUC[2] = paste("svm AUC:",round(performance(pred,'auc')@y.values[[1]],3),sep = " ")
+
+
+  g1 <- g0 +
+    geom_path(data = plotdata,aes(x = x, y = y, colour = x), size=1,color = "blue") +
+    # labs(x = "False positive rate", y = "Ture positive rate") +
+    annotate("text", x=0.75, y=0.4, label=paste("Blue: ",AUC[2],sep = ""))
+
+  df<-cbind(df,cbind(fc,mod_pre))
+
+  #GLM
+  max=0
+  num=0
+  fc<-as.numeric()
+  mod_pre<-as.numeric()
+  for(i in 1:repnum){
+    fold_test<-train[folds[[i]],]
+    fold_train<-train[-folds[[i]],]
+    model<-glm(OTUgroup~.,family='binomial',data=fold_train)
+    model
+    model_pre<-predict(model,type='response',newdata=fold_test)
+    model_pre
+
+    fc<-append(fc,fold_test$OTUgroup)
+    mod_pre<-append(mod_pre,as.numeric(model_pre))
+  }
+
+  pred <- prediction(mod_pre, fc)
+  perf <- performance(pred,"tpr","fpr")
+  x <- unlist(perf@x.values)
+  y <- unlist(perf@y.values)
+  plotdata <- data.frame(x,y)
+  names(plotdata) <- c("x", "y")
+  AUC[3] = paste("GLM AUC:",round(performance(pred,'auc')@y.values[[1]],3),sep = " ")
+
+  g2 <- g1 +
+    geom_path(data = plotdata,aes(x = x, y = y, colour = x), size=1,color = "black") +
+    labs(x = "False positive rate", y = "Ture positive rate") +
+    annotate("text", x=0.75, y=0.3, label=paste("Black: ",AUC[3],sep = ""))
+
+  g2
+
+  df<-cbind(df,cbind(fc,mod_pre))
+
+
+  return(list(g2,AUC,df))
+}
+
 result = MicroRoc( ps = ps.1,group  = "Group")
-#--提取roc曲线
-p <- result[[1]] + 
-  mytheme1
+
+p <- result[[1]]
 p
 ```
 
@@ -824,11 +1409,6 @@ p
 
 
 ####  Code 6A（Example 32）
-
-Example 32
-
-网络分析
-
 ```{R}
 library(psych)
 ps_sub = filter_OTU_ps(ps = ps,Top = 150)
@@ -839,18 +1419,14 @@ occor = psych::corr.test(t(otu_table),use="pairwise",
 occor.r = occor$r
 occor.p = occor$p
 
-result <- sparcc.micro(data = t(otu_table),R = R,ncpus = ncpus)
+result <- sparcc.micro(data = t(otu_table),R = 10,ncpus = 1)
 occor.r = result[[1]]
 occor.p = result[[2]]
+occor.p
 ```
 
 
 ####  Code 6B（Example 33）
-
-Example 33
-
-WGCNA
-
 ```{R}
 x = ps %>%
   filter_OTU_ps(Top = 200) %>%
@@ -869,26 +1445,15 @@ diag(occor.r) <- 0
 ```
 
 #### Code 6C（Example 34）
-
-Example 34
-
-Hmisc 
-
 ```{R}
 library(Hmisc)
 df_corr <- rcorr(t(otu_table), type = 'spearman')
 df_corr_r = df_corr$r
-df_corr_p = df_corr$P#注意，这里P大写
-# 使用BH法校正p值
+df_corr_p = df_corr$P
 df_p <- p.adjust(df_corr_p, method = 'BH')
 ```
 
 #### Code 6D（Example 35）
-
-Example 35
-
-SpiecEasi
-
 ```{R}
 library(SpiecEasi)
 spmatrix <- SpiecEasi::sparcc(t(otu_table))
@@ -907,12 +1472,10 @@ pvals <- sp.p$pvals
 sparCCpcors <- diag(0.5, nrow = dim(spmatrix$Cor)[1], ncol = dim(spmatrix$Cor)[1])
 sparCCpcors[upper.tri(sparCCpcors, diag=FALSE)] <- cors
 sparCCpcors <- sparCCpcors + t(sparCCpcors)
-
 sparCCpval <- diag(0.5, nrow = dim(spmatrix$Cor)[1], ncol = dim(spmatrix$Cor)[1])
 sparCCpval[upper.tri(sparCCpval, diag=FALSE)] <- pvals
 sparCCpval <- sparCCpval + t(sparCCpval)
 dim(sparCCpval)
-
 rownames(sparCCpcors) <- colnames(t(otu_table))
 colnames(sparCCpcors) <- colnames(t(otu_table))
 rownames(sparCCpval) <- colnames(t(otu_table))
@@ -922,17 +1485,12 @@ colnames(sparCCpval) <- colnames(t(otu_table))
 
 #### Code 6E（Example 36）
 
-Example 36
-
-igraph
-
 ```{R}
 library(Hmisc)
 library(igraph)
 library(ggClusterNet)
 df_corr <- rcorr(t(otu_table), type = 'spearman')
 df_corr_r = df_corr$r
-
 
 igraph = make_igraph(df_corr_r)
 
@@ -942,17 +1500,17 @@ num.edges
 num.vertices <- length(V(igraph))# length(diversity(igraph, weights = NULL, vids = 	V(igraph)))
 num.vertices
 #
-connectance <- edge_density(igraph,loops=FALSE)# 同 graph.density;loops如果为TRUE,允许自身环（self loops即A--A或B--B）的存在
+connectance <- edge_density(igraph,loops=FALSE)#
 connectance
 # (Average degree)
-average.degree <- mean(igraph::degree(igraph))# 或者为2M/N,其中M 和N 分别表示网络的边数和节点数。
+average.degree <- mean(igraph::degree(igraph))
 average.degree
 # (Average path length)
 if (!is.null(E(igraph)$weight)) {
   igraph.weight <- E(igraph)$weight
   E(igraph)$weight = abs(E(igraph)$weight)
 }
-average.path.length <- average.path.length(igraph) # 同mean_distance(igraph) # mean_distance calculates the average path length in a graph
+average.path.length <- average.path.length(igraph) # mean_distance(igraph) # mean_distance calculates the average path length in a graph
 average.path.length
 
 # (Diameter)
@@ -961,30 +1519,25 @@ diameter
 ```
 
 #### Code 6F（Example 37）
-
-Example 37
-
-ggraph
-
 ```{R}
 library(Hmisc)
+library(ggraph)
 df_corr <- rcorr(t(otu_table), type = 'spearman')
 df_corr_r = df_corr$r
-df_corr_p = df_corr$P#注意，这里P大写
-# 使用BH法校正p值
+df_corr_p = df_corr$P
+
 df_p <- p.adjust(df_corr_p, method = 'BH')
 df_corr_r[df_corr_p>0.05|abs(df_corr_r)<0.6] = 0
 igraph = make_igraph(df_corr_r)
 
-p  = ggraph(igraph) + 
-  geom_edge_link(color = "blue") + 
+p  = ggraph(igraph) +
+  geom_edge_link(color = "blue") +
   geom_node_point(color = "red") +
   theme_void()
 
 p
 ```
 
-igraph可视化
 
 ```{R}
 set.seed(12)
@@ -1003,13 +1556,6 @@ plot(igraph,main="Co-occurrence network",
 
 
 #### Code 6G（Example 38）
-
-Example 38
-
-sna 提供了多种网络可视化布局
-
-ggClsuterNet提供了多种网络可视化布局
-
 ```{R}
 result = corMicro (ps = ps,
                    N = 150,
@@ -1017,12 +1563,12 @@ result = corMicro (ps = ps,
                    r.threshold=0.8,
                    p.threshold=0.05,
                    method = "spearman"
-                   
-                   
+
+
 )
 cor = result[[1]]
 ps_net = result[[3]]
-otu_table = ps_net %>% 
+otu_table = ps_net %>%
   vegan_otu() %>%
   t() %>%
   as.data.frame()
@@ -1031,7 +1577,9 @@ tax_table = ps_net %>%
   as.data.frame()
 netClu = data.frame(ID = row.names(tax_table),group =rep(1,length(row.names(tax_table)))[1:length(row.names(tax_table))] )
 netClu$group = as.factor(netClu$group)
+library(sna)
 result2 = PolygonClusterG (cor = cor,nodeGroup =netClu )
+
 node = result2[[1]]
 nodes = nodeadd(plotcord =node,otu_table = otu_table,tax_table = tax_table)
 edge = edgeBuild(cor = cor,node = node)
@@ -1068,15 +1616,29 @@ p1
 ### Functional predict
 
 
-
 #### Code 7A （Example 39）
-
-`
 
 Tax4Fun
 
 ```{R}
 
+# library(Tax4Fun)
+# ###input data
+# QIIMESingleData <- importQIIMEData("otu_taxa_table.txt")
+# #QIIMESingleData <-importQIIMEBiomData("HMP_0.97_table.txt")
+# 
+# otu_table = QIIMESingleData$otuTable
+# colSums(otu_table)
+# 
+# write.table("ID\t", file="otu_table_tax.txt",append = FALSE, quote = FALSE, sep="\t",eol = "", na = "NA", dec = ".", row.names = F,col.names = F)
+# write.table(otu_table, file="otu_table_tax.txt",append = T, quote = FALSE, sep="\t",eol = "\n", na = "NA", dec = ".", row.names = TRUE,col.names = TRUE)
+# 
+# ##KO_all
+# Tax4FunOutput <- Tax4Fun(QIIMESingleData, "/EMCDisk1/Micro/Test/R/Tax4Fun/SILVA/SILVA123", fctProfiling = TRUE, refProfile = "UProC", shortReadMode = TRUE, normCopyNo = TRUE)
+# KO_table = t(Tax4FunOutput$Tax4FunProfile)
+# colSums(KO_table)
+# write.table("ID\t", file="KO_table.txt",append = FALSE, quote = FALSE, sep="\t",eol = "", na = "NA", dec = ".", row.names = F,col.names = F)
+# write.table(KO_table, file="KO_table.txt",append = T, quote = FALSE, sep="\t",eol = "\n", na = "NA", dec = ".", row.names = TRUE,col.names = TRUE)
 
 ```
 
@@ -1098,20 +1660,20 @@ otudir = funcpath
 library(Tax4Fun2)
 #物种注释
 #指定 OTU 代表序列、Tax4Fun2 库的位置、参考数据库版本、序列比对（blastn）线程数等
-runRefBlast(path_to_otus = './data/otus2.fa', 
-            path_to_reference_data = path_to_reference_data, 
-            path_to_temp_folder = otudir, database_mode = 'Ref100NR', 
+runRefBlast(path_to_otus = './data/otus2.fa',
+            path_to_reference_data = path_to_reference_data,
+            path_to_temp_folder = otudir, database_mode = 'Ref100NR',
             use_force = TRUE, num_threads = 4)
 
 
 #预测群落功能
 #指定 OTU 丰度表、Tax4Fun2 库的位置、参考数据库版本、上步的物种注释结果路径等
 makeFunctionalPrediction(path_to_otu_table = './data/otutab.txt',
-                         path_to_reference_data = path_to_reference_data, 
-                         path_to_temp_folder = otudir, 
-                         database_mode = 'Ref100NR', 
+                         path_to_reference_data = path_to_reference_data,
+                         path_to_temp_folder = otudir,
+                         database_mode = 'Ref100NR',
                          normalize_by_copy_number = TRUE,
-                         min_identity_to_reference = 0.97, 
+                         min_identity_to_reference = 0.97,
                          normalize_pathways = FALSE)
 ```
 
@@ -1120,11 +1682,7 @@ makeFunctionalPrediction(path_to_otu_table = './data/otutab.txt',
 
 #### Code 8A Example 42
 
-其他微生物组分析1:微生物群落构建过程分析
-
-
 ```{R}
-#--中性模型
 library(picante)
 library(ape)
 library(vegan)
@@ -1136,99 +1694,433 @@ require(minpack.lm)
 require(Hmisc)
 require(stats4)
 library(parallel)
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro\\phylo_Micro\\neutralModel.R")
-result = neutralModel(ps = ps,group  = "Group",ncol = 3)
-p1 =  result[[1]]
-p1
+library(tidyverse)
+set.seed(72)
+psrare = rarefy_even_depth(ps)
 
-#---计算零模型
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro\\phylo_Micro\\nullModel1.R")
-result <- nullModel(ps = ps,
-                    group="Group",
-                    dist.method =  "bray",
-                    gamma.method = "total",
-                    transfer = "none",
-                    null.model = "ecosphere"
-)
-#--分组零模型运行结果
-nullModeltab <- result[[1]]
-# 比例
-ratiotab <- result[[2]]
-#-统计量统计差异
-aovtab <- result[[3]]
+ps.norm = transform_sample_counts(psrare, function(x) x/sum(x))
+
+map = as.data.frame(sample_data(psrare))
+aa = levels(map$Group)
+aa
+map$ID = row.names(map)
+
+plots = list()
+dat1 = list()
+dat2 = list()
+i =1
+for (i in 1:length(aa)) {
+
+
+  maps<- dplyr::filter(as.tibble(map),Group %in%aa[i])
+  maps = as.data.frame(maps)
+  row.names(maps) = maps$ID
+  ps_sub = psrare
+  sample_data( ps_sub ) =maps ;ps_sub
+
+
+  OTU.table = t(otu_table(ps_sub))
+  head(OTU.table )
+  N <- mean(apply(OTU.table, 1, sum))
+  p.m <- apply(OTU.table, 2, mean)
+  p.m <- p.m[p.m != 0]
+  p <- p.m/N
+  p.df = data.frame(p) %>%
+    rownames_to_column(var="OTU")
+  OTU.table.bi <- 1*(OTU.table>0)
+  freq.table <- apply(OTU.table.bi, 2, mean)
+  freq.table <- freq.table[freq.table != 0]
+  freq.df = data.frame(OTU=names(freq.table), freq=freq.table)
+
+  #Combine
+  C <- inner_join(p.df,freq.df, by="OTU") %>%
+    arrange(p)
+  # Remove rows with any zero (absent in either source pool or local communities). You already did this, but just to make sure we will do it again.
+  C.no0 <- C %>%
+    filter(freq != 0, p != 0)
+
+  #Calculate the limit of detection
+  d <- 1/N
+
+  ##Fit model parameter m (or Nm) using Non-linear least squares (NLS)
+  p.list <- C.no0$p
+  freq.list <- C.no0$freq
+  m.fit <- nlsLM(freq.list ~ pbeta(d, N*m*p.list, N*m*(1-p.list), lower.tail=FALSE), start=list(m=0.1))
+  m.ci <- confint(m.fit, 'm', level=0.95)
+  m.sum <- summary(m.fit)
+  m.coef = coef(m.fit)
+
+  freq.pred <- pbeta(d, N*coef(m.fit)*p.list, N*coef(m.fit)*(1-p.list), lower.tail=FALSE)
+  Rsqr <- 1 - (sum((freq.list - freq.pred)^2))/(sum((freq.list - mean(freq.list))^2))
+
+  # Get table of model fit stats
+  fitstats <- data.frame(m=m.coef, m.low.ci=m.ci[1], m.up.ci=m.ci[2],
+                         Rsqr=Rsqr, p.value=m.sum$parameters[4], N=N,
+                         Samples=nrow(OTU.table), Richness=length(p.list),
+                         Detect=d)
+
+  # Get confidence interval for predictions
+  freq.pred.ci <- binconf(freq.pred*nrow(OTU.table), nrow(OTU.table), alpha=0.05, method="wilson", return.df=TRUE)
+
+  # Get table of predictions
+  pred.df <- data.frame(metacomm_RA=p.list, frequency=freq.pred,
+                        frequency_lowerCI=freq.pred.ci[,2],
+                        frequency_upperCI=freq.pred.ci[,3]) %>%
+    unique()
+
+  # Get table of observed occupancy and abundance
+  obs.df = C.no0 %>%
+    dplyr::rename(metacomm_RA = p, frequency=freq)
+
+  head(obs.df)
+  p = ggplot(data=obs.df) +
+    geom_point(data=obs.df, aes(x=log10(metacomm_RA), y=frequency),
+               alpha=.3, size=2, color="#8DD3C7") +
+    geom_line(data=pred.df, aes(x=log10(metacomm_RA), y=frequency), color="#FFFFB3") +
+    geom_line(data=pred.df, aes(x=log10(metacomm_RA), y=frequency_lowerCI), linetype=2, color="#FFFFB3") +
+    geom_line(data=pred.df, aes(x=log10(metacomm_RA), y=frequency_upperCI), linetype=2, color="#FFFFB3") +
+    # geom_text(data=fitstats, aes(label = paste("R^2 == ", round(Rsqr, 3))),
+    #           x=1, y=0.75, size=4, parse=TRUE) +
+    # geom_text(data=fitstats, aes(label = paste("italic(m) ==", round(m, 3))),
+    #           x=-1, y=0.85, size=4, parse=TRUE) +
+    labs(x="Log10 abundance in\nmetacommunity", y="Frequency detected",title = paste(aa[i],paste("R^2 == ", round(fitstats$Rsqr, 3)),paste("italic(m) ==", round(fitstats$m, 3)))) +
+    theme_bw() +
+    theme(axis.line = element_line(color="black"),
+          legend.position = "none",
+          axis.title = element_text(size=14),
+          axis.text = element_text(size=12))
+
+  p
+  plots[[aa[i]]] = p
+  dat1[[aa[i]]] = obs.df
+  dat2[[aa[i]]] = pred.df
+}
+
+p  = ggpubr::ggarrange(plotlist = plots,common.legend = TRUE, legend="right",ncol =3,nrow = 1)
+p
+
+
 ```
 
 BNTI
 
 ```{R}
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro\\phylo_Micro\\bNTICul.R")
-result = bNTICul(ps = ps %>% filter_OTU_ps(200),group  = "Group",num = 10,thread = 1)
-bNTI = result[[1]]
-head(bNTI)
+num = 10
+ps_sub <- ps %>% filter_OTU_ps(200)
 
-phypath = "./"
-filename = paste(phypath,"/4_bNTI.csv",sep = "")
-write.csv(bNTI, filename)
+map = as.data.frame(sample_data(ps_sub))
+map$ID = row.names(map)
+sample_data(ps) = map
+
+set.seed(72)  # setting seed for reproducibility
+psrare = rarefy_even_depth(ps_sub)
+sample_sums(psrare)
+ps.norm = transform_sample_counts(psrare, function(x) x/sum(x))
+bMNTD_null_func <- function(i, OTU.table, tree){
+  tree$tip.label = sample(tree$tip.label)
+  bMNTD_s = comdistnt(OTU.table, cophenetic(tree), abundance.weighted = TRUE)
+  A <- attr(bMNTD_s, "Size")
+  B <- if (is.null(attr(bMNTD_s, "Labels"))) sequence(A) else attr(bMNTD_s, "Labels")
+  if (isTRUE(attr(bMNTD_s, "Diag"))) attr(bMNTD_s, "Diag") <- FALSE
+  if (isTRUE(attr(bMNTD_s, "Upper"))) attr(bMNTD_s, "Upper") <- FALSE
+  bMNTD_s.df = data.frame(Sample_1 = B[unlist(lapply(sequence(A)[-1], function(x) x:A))],
+                          Sample_2 = rep(B[-length(B)], (length(B)-1):1),
+                          bMNTD = as.vector(bMNTD_s),
+                          rep=i)
+  return(bMNTD_s.df)
+}
+# 计算βNTI
+
+
+Phylo_turnover <- function(physeq, reps, nproc){
+  # Extract OTU table
+  OTU.table = t(otu_table(physeq))
+  # Extract phylogenetic tree
+  tree = phy_tree(physeq)
+
+  # Get βMNTD between all communities
+  bMNTD_o = comdistnt(OTU.table, cophenetic(tree), abundance.weighted = TRUE)
+  A <- attr(bMNTD_o, "Size")
+  B <- if (is.null(attr(bMNTD_o, "Labels"))) sequence(A) else attr(bMNTD_o, "Labels")
+  if (isTRUE(attr(bMNTD_o, "Diag"))) attr(bMNTD_o, "Diag") <- FALSE
+  if (isTRUE(attr(bMNTD_o, "Upper"))) attr(bMNTD_o, "Upper") <- FALSE
+  bMNTD_o.df = data.frame(Sample_1 = B[unlist(lapply(sequence(A)[-1], function(x) x:A))],
+                          Sample_2 = rep(B[-length(B)], (length(B)-1):1),
+                          bMNTD = as.vector(bMNTD_o))
+
+  # Get βMNTD for randomized null communities
+  rep.list = seq(1, reps)
+  bMNTD_s.df.list = mclapply(rep.list, bMNTD_null_func, OTU.table=OTU.table, tree=tree, mc.cores=nproc)
+
+  # Combine all data together and calculate βNTI for each sample pair
+  bMNTD_s.df <- do.call("rbind", bMNTD_s.df.list)
+  bMNTD_s.means.df = bMNTD_s.df %>%
+    group_by(Sample_1, Sample_2) %>%
+    dplyr::summarize(mean_bMNTD = mean(bMNTD),
+                     sd_bMNTD = sd(bMNTD))
+
+  bMNTD_o.df = inner_join(bMNTD_o.df, bMNTD_s.means.df, by=c("Sample_1", "Sample_2")) %>%
+    mutate(bNTI = (bMNTD - mean_bMNTD)/sd_bMNTD)
+
+  return(bMNTD_o.df)
+}
+
+
+bNTI = Phylo_turnover(psrare, 10, 1)
+
+
 ```
 
-计算RCbray
+
 
 ```{R}
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro\\phylo_Micro\\RCbary.R")
+
+
+RCbary = function(otu = NULL,tax = NULL,map = NULL,tree = NULL ,ps = NULL,group  = "Group",num = 99,thread = 1){
+  ps_sub <- ps
+  #----------------整理map文件
+  map = as.data.frame(sample_data(ps_sub))
+  map$ID = row.names(map)
+  sample_data(ps) = map
+  #-------------------准备OTU表格
+  #-----------------抽平-不设置抽平条数，默认按照最小序列数数目抽平
+  set.seed(72)  # setting seed for reproducibility
+  psrare = rarefy_even_depth(ps_sub )
+  #检查序列数量
+  sample_sums(psrare)
+  # 标准化数据
+  ps.norm = transform_sample_counts(psrare, function(x) x/sum(x))
+
+
+
+
+  #--------------两个函数
+  # 对模拟群落计算距离
+  RCbray_null_func <- function(i, freq.abd.df, alpha1, alpha2, N){
+    # Get simulated communities and distance
+    ## initally select OTUs weighted by their frequency. The number of OTUs selected should equal the richness of the samples.
+    simcom1 = data.frame(table(sample(freq.abd.df$OTU, size=alpha1, replace=F, prob=freq.abd.df$freq)), stringsAsFactors = F)
+    colnames(simcom1) = c("OTU","simcom1")
+    simcom1$OTU = as.character(simcom1$OTU)
+    simcom1 = inner_join(simcom1, freq.abd.df, by="OTU")
+    simcom2 = data.frame(table(sample(freq.abd.df$OTU, size=alpha2, replace=F, prob=freq.abd.df$freq)), stringsAsFactors = F)
+    colnames(simcom2) = c("OTU","simcom2")
+    simcom2$OTU = as.character(simcom2$OTU)
+    simcom2 = inner_join(simcom2, freq.abd.df, by="OTU")
+
+    ## Now recruit OTUs based on their abundance in the metacommunity
+    simcom1.abd = data.frame(table(sample(simcom1$OTU, size=N-alpha1, replace=T, prob=simcom1$p)), stringsAsFactors = F)
+    colnames(simcom1.abd) = c("OTU","simcom1.abd")
+    simcom1.abd$OTU = as.character(simcom1.abd$OTU)
+    simcom1 = full_join(simcom1, simcom1.abd, by="OTU") %>%
+      mutate(simcom1.abd = ifelse(is.na(simcom1.abd), 1, simcom1.abd)) %>%
+      select(OTU, simcom1.abd)
+
+    simcom2.abd = data.frame(table(sample(simcom2$OTU, size=N-alpha2, replace=T, prob=simcom2$p)), stringsAsFactors = F)
+    colnames(simcom2.abd) = c("OTU","simcom2.abd")
+    simcom2.abd$OTU = as.character(simcom2.abd$OTU)
+    simcom2 = full_join(simcom2, simcom2.abd, by="OTU") %>%
+      mutate(simcom2.abd = ifelse(is.na(simcom2.abd), 1, simcom2.abd)) %>%
+      select(OTU, simcom2.abd)
+
+
+    simcom = full_join(simcom1, simcom2, by="OTU")
+    simcom[is.na(simcom)] = 0
+    rownames(simcom) = simcom$OTU
+    simcom$OTU = NULL
+
+    null.dist = vegdist(t(simcom), method="bray")[1]
+    return(null.dist)
+  }
+
+  # 计算RCbray的主功能
+  Calc_RCbray <- function(physeq, reps, nproc){
+    # Get OTU table from phyloseq object
+    otu.table = otu_table(physeq)
+
+    # Get alpha diversity for each sample
+    otu.PA.table = otu.table
+    otu.PA.table[otu.PA.table > 0] = 1
+    alpha.df = data.frame(Sample_ID = colnames(otu.PA.table), OTU.n = colSums(otu.PA.table), stringsAsFactors = F)
+
+    # Get beta diversity matrix
+    beta.table = as.matrix(vegdist(t(otu.PA.table), method="bray", diag=TRUE, upper=TRUE))
+
+    ## Get metacommunity
+    # Calculate the number of individuals in the meta community (Average read depth)
+    N <- mean(apply(t(otu.table), 1, sum))
+
+    # Calculate the average relative abundance of each taxa across communities
+    p.m <- apply(t(otu.table), 2, mean)
+    p.m <- p.m[p.m != 0]
+    p <- p.m/N
+
+    # Calculate the occurrence frequency of each taxa across communities
+    otu.table.bi <- 1*(t(otu.table)>0)
+    freq <- apply(otu.table.bi, 2, mean)
+    freq <- freq[freq != 0]
+
+    # Combine
+    freq.abd.df = data.frame(p=p, freq=freq) %>%
+      tibble::rownames_to_column(var="OTU") %>%
+      filter(p != 0, freq != 0) %>%
+      arrange(p)
+
+    # For each pair of samples run the RCbray analysis
+    comps = combn(alpha.df$Sample_ID, m=2, simplify = F)
+    RCb.df = data.frame(Site1 = character(), Site2 = character(), RCb = numeric(), stringsAsFactors = F)
+    for (j in seq(1, length(comps))){
+      sam = comps[[j]]
+      alpha1 = alpha.df[alpha.df$Sample_ID == sam[1],]$OTU.n
+      alpha2 = alpha.df[alpha.df$Sample_ID == sam[2],]$OTU.n
+      # Permute "reps" many times
+      rep.list = seq(1, reps)
+      null.list = mclapply(rep.list, RCbray_null_func, freq.abd.df=freq.abd.df, alpha1=alpha1, alpha2=alpha2, N=N, mc.cores=nproc)
+
+      RCb = (length(null.list[null.list > beta.table[sam[1], sam[2]]]) + (0.5*length(null.list[null.list == beta.table[sam[1], sam[2]]])))/reps
+      RCb = (RCb - 0.5)*2
+
+      RCb.df = rbind(RCb.df, data.frame(Site1=sam[1], Site2=sam[2], RCb=RCb, stringsAsFactors = F))
+    }
+
+    RCb.df
+    return(RCb.df)
+  }
+
+
+  # 运行RCbray的计算，这个运算再5个小时左右999重复
+  RCb = Calc_RCbray(psrare, num, thread)
+
+  head(RCb)
+
+  return(list(RCb))
+}
 result = RCbary(ps = ps%>% filter_OTU_ps(200) ,group  = "Group",num = 10,thread = 1)
 RCbary = result[[1]]
 head(RCbary)
 filename = paste(phypath,"/5_RCb.csv",sep = "")
 write.csv(RCbary,filename)
-```
 
-BetaNTI和RCbray联合
+#---二
+ps_sub <- ps%>% filter_OTU_ps(200)
+#----------------整理map文件
+map = as.data.frame(sample_data(ps_sub))
+map$ID = row.names(map)
+sample_data(ps) = map
 
-```{R}
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro\\phylo_Micro\\bNTIRCPlot.R")
-bNTI = read.csv(paste(phypath,"/4_bNTI.csv",sep = ""),row.names = 1)
-head(bNTI)
-RCb = read.csv(paste(phypath,"/5_RCb.csv",sep = ""),row.names = 1) %>%
-  dplyr::mutate(Sample_1 = Site2, Sample_2 = Site1)
+set.seed(72)  # setting seed for reproducibility
+psrare = rarefy_even_depth(ps_sub )
+#检查序列数量
+sample_sums(psrare)
+# 标准化数据
+ps.norm = transform_sample_counts(psrare, function(x) x/sum(x))
+
+
+
+
+#--------------两个函数
+# 对模拟群落计算距离
+RCbray_null_func <- function(i, freq.abd.df, alpha1, alpha2, N){
+  # Get simulated communities and distance
+  ## initally select OTUs weighted by their frequency. The number of OTUs selected should equal the richness of the samples.
+  simcom1 = data.frame(table(sample(freq.abd.df$OTU, size=alpha1, replace=F, prob=freq.abd.df$freq)), stringsAsFactors = F)
+  colnames(simcom1) = c("OTU","simcom1")
+  simcom1$OTU = as.character(simcom1$OTU)
+  simcom1 = inner_join(simcom1, freq.abd.df, by="OTU")
+  simcom2 = data.frame(table(sample(freq.abd.df$OTU, size=alpha2, replace=F, prob=freq.abd.df$freq)), stringsAsFactors = F)
+  colnames(simcom2) = c("OTU","simcom2")
+  simcom2$OTU = as.character(simcom2$OTU)
+  simcom2 = inner_join(simcom2, freq.abd.df, by="OTU")
+
+  ## Now recruit OTUs based on their abundance in the metacommunity
+  simcom1.abd = data.frame(table(sample(simcom1$OTU, size=N-alpha1, replace=T, prob=simcom1$p)), stringsAsFactors = F)
+  colnames(simcom1.abd) = c("OTU","simcom1.abd")
+  simcom1.abd$OTU = as.character(simcom1.abd$OTU)
+  simcom1 = full_join(simcom1, simcom1.abd, by="OTU") %>%
+    mutate(simcom1.abd = ifelse(is.na(simcom1.abd), 1, simcom1.abd)) %>%
+    select(OTU, simcom1.abd)
+
+  simcom2.abd = data.frame(table(sample(simcom2$OTU, size=N-alpha2, replace=T, prob=simcom2$p)), stringsAsFactors = F)
+  colnames(simcom2.abd) = c("OTU","simcom2.abd")
+  simcom2.abd$OTU = as.character(simcom2.abd$OTU)
+  simcom2 = full_join(simcom2, simcom2.abd, by="OTU") %>%
+    mutate(simcom2.abd = ifelse(is.na(simcom2.abd), 1, simcom2.abd)) %>%
+    select(OTU, simcom2.abd)
+
+
+  simcom = full_join(simcom1, simcom2, by="OTU")
+  simcom[is.na(simcom)] = 0
+  rownames(simcom) = simcom$OTU
+  simcom$OTU = NULL
+
+  null.dist = vegdist(t(simcom), method="bray")[1]
+  return(null.dist)
+}
+
+# 计算RCbray的主功能
+Calc_RCbray <- function(physeq, reps, nproc){
+  # Get OTU table from phyloseq object
+  otu.table = otu_table(physeq)
+
+  # Get alpha diversity for each sample
+  otu.PA.table = otu.table
+  otu.PA.table[otu.PA.table > 0] = 1
+  alpha.df = data.frame(Sample_ID = colnames(otu.PA.table), OTU.n = colSums(otu.PA.table), stringsAsFactors = F)
+
+  # Get beta diversity matrix
+  beta.table = as.matrix(vegdist(t(otu.PA.table), method="bray", diag=TRUE, upper=TRUE))
+
+  ## Get metacommunity
+  # Calculate the number of individuals in the meta community (Average read depth)
+  N <- mean(apply(t(otu.table), 1, sum))
+
+  # Calculate the average relative abundance of each taxa across communities
+  p.m <- apply(t(otu.table), 2, mean)
+  p.m <- p.m[p.m != 0]
+  p <- p.m/N
+
+  # Calculate the occurrence frequency of each taxa across communities
+  otu.table.bi <- 1*(t(otu.table)>0)
+  freq <- apply(otu.table.bi, 2, mean)
+  freq <- freq[freq != 0]
+
+  # Combine
+  freq.abd.df = data.frame(p=p, freq=freq) %>%
+    tibble::rownames_to_column(var="OTU") %>%
+    filter(p != 0, freq != 0) %>%
+    arrange(p)
+
+  # For each pair of samples run the RCbray analysis
+  comps = combn(alpha.df$Sample_ID, m=2, simplify = F)
+  RCb.df = data.frame(Site1 = character(), Site2 = character(), RCb = numeric(), stringsAsFactors = F)
+  for (j in seq(1, length(comps))){
+    sam = comps[[j]]
+    alpha1 = alpha.df[alpha.df$Sample_ID == sam[1],]$OTU.n
+    alpha2 = alpha.df[alpha.df$Sample_ID == sam[2],]$OTU.n
+    # Permute "reps" many times
+    rep.list = seq(1, reps)
+    null.list = mclapply(rep.list, RCbray_null_func, freq.abd.df=freq.abd.df, alpha1=alpha1, alpha2=alpha2, N=N, mc.cores=nproc)
+
+    RCb = (length(null.list[null.list > beta.table[sam[1], sam[2]]]) + (0.5*length(null.list[null.list == beta.table[sam[1], sam[2]]])))/reps
+    RCb = (RCb - 0.5)*2
+
+    RCb.df = rbind(RCb.df, data.frame(Site1=sam[1], Site2=sam[2], RCb=RCb, stringsAsFactors = F))
+  }
+
+  RCb.df
+  return(RCb.df)
+}
+
+# 运行RCbray的计算，这个运算再5个小时左右999重复
+RCb = Calc_RCbray(psrare, 10, 1)
 head(RCb)
-result = bNTIRCPlot(ps = ps %>% filter_OTU_ps(200) ,RCb  = RCb,bNTI = bNTI,group  = "Group")
-#--bNTI出图片
-p3 <- result[[1]] 
-#RCbary可视化
-p4 <- result[[2]] 
-p4
-#组合图片BNTI，RCbray
-p5 <- result[[3]]
-p5
-plotdata = result[[4]]
-head(plotdata)
-dat = result[[5]]
-head(dat)
-filename = paste(phypath,"/6_bNTI_RCbray.csv",sep = "")
-write.csv(plotdata,filename)
 ```
 
-环境因子和BetaNTI相关
 
-```{R}
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro\\phylo_Micro\\EnvCorbNTI.R")
-bNTIRC = read.csv(paste(phypath,"/6_bNTI_RCbray.csv",sep = ""),row.names = 1)
-head(bNTIRC)
-
-map = sample_data(ps %>% filter_OTU_ps(200) )
-head(map)
-data(env1)
-plot = EnvCorbNTI(ps = ps %>% filter_OTU_ps(200) ,
-                  bNTIRC = bNTIRC,
-                  group  = "Group",
-                  env = env1
-)
-p6 <- plot[[1]]
-p6
-
-```
 
 #### Code 8B Example 43
+
+iCAMP
 
 ```{R}
 
@@ -1241,7 +2133,8 @@ p6
 系统发育信号
 
 ```{R}
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro\\phylo_Micro\\phyloSignal_and_phySigplot.R")
+source("./4.The best practice R pipeline/function/phyloSignal_and_phySigplot.R")
+phypath = "../2.Microbial community analysis/"
 phypath2 = paste(phypath,"/phyloSignal/",sep = "")
 dir.create(phypath)
 
@@ -1261,8 +2154,7 @@ head(data)
 
 
 #### Code 8D Example 45
-
-细菌-环境因子网络
+ 
 
 ```{R}
 library(phyloseq)
@@ -1286,20 +2178,20 @@ head(Gru)
 # library(igraph)
 result <- ggClusterNet::corBionetwork(ps = ps.merge,
                                       N = 0,
-                                      r.threshold = 0.4, # 相关阈值
+                                      r.threshold = 0.4,
                                       p.threshold = 0.05,
                                       big = T,
                                       group = "Group",
-                                      env = data1, # 环境指标表格
-                                      envGroup = Gru,# 环境因子分组文件表格
+                                      env = data1,
+                                      envGroup = Gru,
                                       # layout = "fruchtermanreingold",
-                                      path = Envnetplot,# 结果文件存储路径
-                                      fill = "Phylum", # 出图点填充颜色用什么值
-                                      size = "igraph.degree", # 出图点大小用什么数据
-                                      scale = TRUE, # 是否要进行相对丰度标准化
-                                      bio = TRUE, # 是否做二分网络
-                                      zipi = F, # 是否计算ZIPI
-                                      step = 100, # 随机网络抽样的次数
+                                      path = Envnetplot,
+                                      fill = "Phylum",
+                                      size = "igraph.degree",
+                                      scale = TRUE,
+                                      bio = TRUE,
+                                      zipi = F,
+                                      step = 100,
                                       width = 18,
                                       label = TRUE,
                                       height = 10

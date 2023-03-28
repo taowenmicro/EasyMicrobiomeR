@@ -3740,11 +3740,7 @@ ggsave(filename,p,width = 12,height = 6,limitsize = FALSE)
 lefsepath = paste(otupath,"/lefse_R_plot/",sep = "")
 dir.create(lefsepath)
 
-# library(ggpubr)
-# library(patchwork)
-# library(MicrobiotaProcess)
-
-
+ps = readRDS("./data/dataNEW/ps_16s.rds")
 library(ggtree)
 
 p_base = function(ps,Top = 100,ranks = 6) {
@@ -3950,6 +3946,7 @@ LDA_Micro = function(ps = ps,
 # anno.data= tablda[[1]]
 # alpha=0.3
 # anno.depth = 2
+library(patchwork)
 
 clade.anno_wt <- function(gtree, anno.data, alpha = 0.2, anno.depth = 5, anno.x = 10, 
                           anno.y = 40){
@@ -4073,11 +4070,8 @@ lefse_bar = function(taxtree = tablda[[2]]){
     scale_x_continuous(limits = c(0,max(taxtree$LDAscore)*1.2))
 }
 
-lefsepath = paste(otupath,"/lefse_R_plot/",sep = "")
-dir.create(lefsepath)
 
-
-for (j in 2:6) {
+for (j in 2:4) {
   
   p1 <- p_base(ps,Top = 200,ranks =j)
   p1
@@ -4107,16 +4101,15 @@ for (j in 2:6) {
   FileName <- paste(lefsepath,j,"_tree_lefse_data", ".csv", sep = "")
   write.csv(res,FileName,quote = F)
 }
+
+
 ```
 
+### 机器学习
 
 
-
-
-
-
-#--机器学习#----
 ```{r}
+
 matpath = paste(otupath,"/Machine_learing/",sep = "")
 dir.create(matpath )
 
@@ -4225,11 +4218,7 @@ MicroRF <- function(otu = NULL,tax = NULL,map = NULL,tree = NULL,
   return(list(p1,p2,prfcv,rfcvtable,a3,pn))
 }
 
-#' result = Micro.rfcv(otu = NULL,tax = NULL,map = NULL,tree = NULL ,ps = ps_rela,group  = "Group",optimal = 20,nrfcvnum = 6)
-#' prfcv = result[[1]]# plot rfcv
-# result[[2]]# plotdata
-#' rfcvtable = result[[3]]# table rfcv
-#'@export
+
 Micro.rfcv = function(otu = NULL,tax = NULL,map = NULL,tree = NULL,
                       ps = NULL,group  = "Group",optimal = 20,nrfcvnum = 5){
   
@@ -4273,12 +4262,6 @@ Micro.rfcv = function(otu = NULL,tax = NULL,map = NULL,tree = NULL,
   return(list(plot = p,plotdata = data,origdata = allerr))
 }
 
-#' result = MicroRoc( ps = ps,group  = "Group")
-#' #--提取roc曲线
-#' result[[1]]
-#' #提取AUC值
-#' result[[2]]
-#'@export
 MicroRoc <- function(otu = NULL,tax = NULL,map = NULL,tree = NULL,
                      ps = NULL,group  = "Group",repnum = 5){
   ps = ggClusterNet::inputMicro(otu,tax,map,tree,ps,group  = group)
@@ -4505,7 +4488,8 @@ library(caret)
 library(ROCR) ##用于计算ROC
 library(e1071)
 
-if (ROC ) {
+ps = ps %>% subset_samples.wt("Group","Group1",TRUE) %>% filter_OTU_ps(300)
+
   #--三种机器学习方法评测
   result = MicroRoc( ps = ps,group  = "Group")
   #--提取roc曲线
@@ -4527,21 +4511,22 @@ if (ROC ) {
   filename = paste(matpath,"/three_method_AUC_plot.jpg",sep = "")
   ggsave(filename,p,width = 8,height = 8)
   
-}
+
 
 
 mapping = as.data.frame(phyloseq::sample_data(ps))
+ps_rela = ps
 #--随机森林全套-如果圈图尚未显示前面几个，就设定max大一点
-result = MicroRF(ps = ps_Rlefse,
+result = MicroRF(ps = ps,
                  group  = "Group",
-                 optimal = optimal,rfcv = rfcv,nrfcvnum = 5,
+                 optimal = 40,rfcv = TRUE,nrfcvnum = 5,
                  min = -1,max = 5)
 #火柴图展示前二十个重要的OTU
 p <- result[[1]] + 
   mytheme1
 p
 
-
+optimal = 40
 filename = paste(matpath,"/randonforest_loading.pdf",sep = "")
 ggsave(filename,p,width = 8,height = optimal/2)
 filename = paste(matpath,"/randonforest_loading.jpg",sep = "")
@@ -4562,7 +4547,6 @@ filename = paste(matpath,"/Show_model.jpg",sep = "")
 ggsave(filename,p,width = 8,height = 4)
 
 
-if (rfcv) {
   # 展示交叉验证结果
   p <- result[[3]]
   filename = paste(matpath,"/randonforest_cross_check.pdf",sep = "")
@@ -4570,7 +4554,6 @@ if (rfcv) {
   data <- result[[4]]
   filename = paste(matpath,"/randomforest_cross_data.csv",sep = "")
   write.csv(data,filename,quote = F)
-}
 
 data <- result[[5]]
 filename = paste(matpath,"/randomforest_data.csv",sep = "")
@@ -4580,17 +4563,15 @@ write.csv(data,filename,quote = F)
 ```
 
 
+## 4.相关和网络分析
 
 
+### 网络分析1
 
 
-
-
-
-
-#---4.相关和网络分析
-#--网络分析1#----
 ```{r}
+ps = readRDS("./data/dataNEW/ps_16s.rds")
+
 netpath = paste(otupath,"/network2/",sep = "")
 dir.create(netpath)
 
@@ -4636,18 +4617,11 @@ ggsave(plotname1, p4_2,width = 10*gnum,height = 10,limitsize = FALSE)
 ```
 
 
+### 网络分析2
 
 
-
-
-
-
-
-
-
-
-#--网络分析3#----
 ```{r}
+
 netpath = paste(otupath,"/network_igraph/",sep = "")
 dir.create(netpath)
 # map = sample_data(ps)
@@ -4659,8 +4633,8 @@ library(ggnewscale)
 result = network.i(ps =  ps,
                    N = 500,
                    r.threshold=0.8,
-                   big = T,
-                   select_layout = T,
+                   big = TRUE,
+                   select_layout = TRUE,
                    method = "pearson",
                    scale = FALSE,
                    layout_net = "model_igraph2",
@@ -4669,7 +4643,7 @@ result = network.i(ps =  ps,
                    path = netpath ,
                    ncol = gnum,
                    nrow = 1,
-                   zipi = F,
+                   zipi = FALSE,
                    order = NULL
 )
 
@@ -4689,7 +4663,10 @@ ggsave(plotname1, p,width = 6*gnum,height = 6,limitsize = FALSE)
 ```
 
 
-#--网络稳定性分析#----
+### 网络稳定性分析
+
+
+
 ```{r}
 library(ggClusterNet)
 library(phyloseq)
@@ -4863,16 +4840,13 @@ fs::dir_create(path)
 write.csv(dat,
           paste(path,"/Natural_connectivity.csv",sep = ""))
 ggsave(paste(path,"/Natural_connectivity.pdf",sep = ""),  p,width = 5,height = 4)
+
 ```
 
 
-
-
-
-
-
-#--网络模块化分析2-模块特征向量#----
+### 网络模块化分析2-模块特征向量
 ```{r}
+
 id = sample_data(ps)$Group %>% unique()
 id
 i = 1
@@ -4926,13 +4900,16 @@ for (i in 1:length(id)) {
 
 detach("package:igraph")
 
-
 ```
-#--分组之间距离比较和可视化#-----
+
+
+
+### 分组之间距离比较和可视化
+
+
 ```{r}
-#--一下调整必须在map文件中包含两列，
-# 一列是时间梯度，使用数字表示，不能带有特殊表述，一列是treat，就是分组信息，这些分组信息必须是有时间梯度的。
-if (6 >gnum & gnum > 2) {
+
+
   
   group = "Group"
   map = as.data.frame(sample_data(ps))
@@ -5016,298 +4993,55 @@ if (6 >gnum & gnum > 2) {
   FileName <- paste(alppath,"distance_boxbar", ".jpg", sep = "")
   ggsave(FileName, p1_3, width = ((4+ gnum) ), height = 8,limitsize = FALSE)
   
-}
-```
-
-#--maptree#-----
-```{r}
-maptpath = paste(otupath,"/maptree/",sep = "")
-dir.create(maptpath)
-#--OTU 水平的maptree
-library(ggClusterNet)
-library(phyloseq)
-library(tidyverse)
-library(ggraph)
-library(data.tree)
-library(igraph)
-
-micro_maptree <- function(
-        ps = ps,
-        Top = 200,
-        labtab =  NULL,
-        seed = 1
-){
-  set.seed(seed)
-  ps_sub <-filter_OTU_ps(ps = ps, Top = Top)
-  ps_sub
-  #--------------------整理tax文件-----------------
-  #注意我们本次制作的是OTU水平的maptree
-  tax = as.data.frame(vegan_tax(ps_sub))
-  # rank_names(ps)
-  # colnames(tax) <- c("Kingdom",	"Phylum",	"Class",	"Order",	"Family",	"Genus","Species")[1:length(colnames(tax))]
-  # colnames(tax) <- c("Kingdom",	"Phylum",	"Class",	"Order",	"Family",	"Genus","Species")[1:length(colnames(tax))]
-
-
-  str(tax)
-  #添加水平识别标示
-  tax$Kingdom = paste("D_",tax$Kingdom,sep = "--")
-  tax$Phylum = paste(tax$Kingdom,"P_",tax$Phylum,sep = "--")
-  tax$Class = paste(tax$Phylum,"C_",tax$Class,sep = "--")
-  tax$Order = paste(tax$Class,"O_",tax$Order,sep = "--")
-  tax$Family = paste(tax$Order,"F_",tax$Family ,sep = "--")
-  tax$Genus = paste(tax$Family,"G_",tax$Genus,sep = "--")
-  tax$Species = paste(tax$Genus,"S_",tax$Species,sep = "--")
-  tax$OTU = paste("ASV",row.names(tax),sep = "--")
-  # # 对不同分类水平的tax未知物种进行区分
-  tax_table(ps_sub) = as.matrix(tax)
-  head(tax)
-  row.names(tax) = tax$OTU
-  #--------------------构造边文件--------------------
-  #提取分组信息
-  Desep_group <- as.character(colnames(tax))
-  #按照form--to格式来排布数据
-  edge_t = tax[c(Desep_group[1:2])]
-  dim(edge_t)
-  edge_t <-  dplyr::distinct(edge_t)
-  head(edge_t)
-  for (i in 2:7) {
-    result = tax[c(Desep_group[i:(i+1)])]
-    colnames(result) = colnames(edge_t)
-    result <-  dplyr::distinct(result)
-    edge_t = rbind(edge_t,result)
-  }
-  tail(edge_t)
-  colnames(edge_t) = c("from","to")
-  if (length(unique(tax$Kingdom)) >1) {
-    edge_t$from = as.character(edge_t$from)
-    edge_t$to = as.character(edge_t$to)
-    buc = data.frame(from = c("king_up","king_up"),to =c("D_Archaea","D_Bacteria") )
-    row.names(buc) = c("sp_K","sp_k1")
-    deg = rbind(edge_t,buc)
-  }
-  deg = edge_t
-  #---------------------------构造基本节点信息文件
-  #构造tree用于提取分级结构
-  tree <-FromDataFrameNetwork(deg)
-  vertices_t  <-  data.frame(
-    name = unique(c(as.character(deg$from), as.character(deg$to)))
-  )
-  # Then I can easily get the level of each node, and add it to the initial data frame:
-  mylevels <- data.frame( name=tree$Get('name'), level=tree$Get("level") )
-  vertices_t <- vertices_t %>%
-    dplyr::left_join(., mylevels, by=c("name"="name"))
-  #这里提取名称信息
-  AA = rep("A",length(vertices_t$name))
-  for (i in 1:length(vertices_t$name)) {
-    AA [i] = strsplit(basename(as.character(vertices_t$name)), "--")[[i]][length(strsplit(basename(as.character(vertices_t$name)), "--")[[i]])]
-  }
-  vertices_t$shortName<- AA
-  # #设置level为2的定义为标签，其他偶读都省略掉，避免杂乱无章
-  vertices_t <- vertices_t %>%
-    dplyr::mutate(new_label=ifelse(level==2, shortName, NA))
-  row.names(vertices_t) = vertices_t$name
-
-
-  tax_table = as.data.frame(vegan_tax(ps_sub))
-  otu_table = as.data.frame(t(vegan_otu(ps_sub)))
-  head(tax_table)
-  #计算全部均值
-  otu_table$mean = rowMeans(otu_table)
-  #组合结果
-  inde = merge(otu_table,tax_table,by = "row.names", all = TRUE)
-  head(inde)
-
-  data_plot <- inde %>%
-    dplyr::group_by(OTU)  %>%
-    dplyr::summarise_if(is.numeric,sum) %>%
-    dplyr::right_join(vertices_t,by = c("OTU" = "name")) %>%
-    as.data.frame()
-
-  data_plot <- data_plot %>%
-    dplyr::left_join(tax_table,by = "OTU") %>%
-    dplyr::distinct(OTU, .keep_all = TRUE)
-  #指定大小映射列将NA值做转换为0
-  asa = data_plot$mean
-  data_plot$mean[is.na(asa)] = 0
-  row.names(data_plot) = data_plot$OTU
-  #选择是否平方根标准化丰度
-  # data_plot$mean[!is.na(asa)] = sqrt(data_plot$mean[!is.na(asa)])
-    if (is.null(labtab)) {
-      p <- maptree_abun(labtab = labtab,deg = deg,data_plot= data_plot)
-    }else if (!is.null(labtab)) {
-      p <- maptree_lab(labtab = labtab,deg = deg,data_plot= data_plot)
-    }
-  return(p)
-}
-
-
-maptree_abun <- function(labtab = labtab,deg = deg,data_plot= data_plot){
-  if (is.null(labtab)) {
-    head(deg)
-    head(data_plot)
-    mygraph <- igraph::graph_from_data_frame(deg, vertices= data_plot )
-    #-----------------------------------设置颜色映射参数-------------------------
-    #
-    data = ggraph::create_layout(mygraph, layout = 'circlepack',weight = mean, sort.by = NULL, direction = "out")
-    head(data)
-    tail(data,20)
-    #设置颜色
-    data$Phylum = as.character(data$Phylum)
-    data$Phylum[is.na(data$Phylum)] = "others"
-    data$Phylum = factor(data$Phylum,levels =unique(data$Phylum) )
-    colbar <-length(unique(data$Phylum))
-
-    data$name
-
-    fil_colors = colorRampPalette(c( "white","#CBD588", "#599861", "orange","#DA5724", "#508578", "#CD9BCD",
-                                     "#AD6F3B", "#673770","#D14285", "#652926", "#C84248",
-                                     "#8569D5", "#5E738F","#D1A33D", "#8A7C64"))(colbar)
-    names(fil_colors) = unique(data$Phylum)
-    fil_colors[1] = "white"
-    # names(fil_colors)[1] = NA
-    ?geom_node_circle
-   # V( mygraph)$color = fil_colors[match(V(mygraph)$Phylum ,names(fil_colors))]
-    ggplot(data = data) +
-      geom_node_circle(aes(
-        x0 = x,
-        y0 = y,
-        r = r,
-        fill = Phylum ) ) +
-      scale_fill_manual(values= fil_colors ) +
-      scale_color_manual( values=c("0" = "white", "1" = "black", "2" = "black", "3" = "black", "4"="black", "5"="black", "6"="black", "7"="black"),guide = FALSE ) +
-      geom_node_text( aes(label=new_label), size=6,repel = TRUE) +
-      # geom_node_label( aes(label=new_label), size=3,repel = TRUE) +
-      theme_void()
-    
-
-      p = ggraph::ggraph(mygraph, layout = 'circlepack',weight = mean,sort.by = NULL, direction = "out") +
-        geom_node_circle(aes(fill = as.factor(depth),color = as.factor(depth) ) ) +
-        scale_fill_hue() +
-        scale_color_manual( values=c("0" = "white", "1" = "black", "2" = "black", "3" = "black", "4"="black", "5"="black", "6"="black", "7"="black"),guide = FALSE ) +
-        geom_node_text( aes(label=new_label), size=6,repel = TRUE) +
-        # geom_node_label( aes(label=new_label), size=3,repel = TRUE) +
-        theme_void()
-
-    # p = ggraph::ggraph(mygraph, layout = 'circlepack',weight = mean,sort.by = NULL, direction = "out") +
-    #   geom_node_circle(aes(fill = as.factor(Phylum),color = as.factor(depth) ) ) +
-    #   scale_fill_manual(values= fil_colors ) +
-    #   scale_color_manual( values=c("0" = "white", "1" = "black", "2" = "black", "3" = "black", "4"="black", "5"="black", "6"="black", "7"="black"),guide = FALSE ) +
-    #   geom_node_text( aes(label=new_label), size=6,repel = TRUE) +
-    #   # geom_node_label( aes(label=new_label), size=3,repel = TRUE) +
-    #   theme_void()
-
-  }
-  return(p)
-}
-
-
-maptree_lab = function(labtab = labtab,deg = deg,data_plot= data_plot){
-   if (!is.null(labtab)) {
-     row.names(labtab) = labtab$ID
-     head(labtab)
-     inde = merge(labtab,tax_table,by = "row.names", all = F)
-     head(inde)
-
-     data_plot1 <- inde %>% select(OTU,lab) %>% right_join(data_plot,by = "OTU")
-     head(data_plot1)
-
-
-     #指定大小映射列将NA值做转换为0
-     asa = data_plot1$mean
-     data_plot1$mean[is.na(asa)] = 0
-     #选择是否平方根标准化丰度
-     # data_plot$mean[!is.na(asa)] = sqrt(data_plot$mean[!is.na(asa)])
-     head(data_plot1)
-     mygraph <- graph_from_data_frame(deg, vertices= data_plot1 )
-     data = ggraph::create_layout(mygraph, layout = 'circlepack',weight = mean, sort.by = NULL, direction = "out")
-     head(data)
-     i = "lab"
-     data[[i]] = as.character(data[[i]])
-     data[[i]][is.na(data[[i]])] = "Other_tax"
-     unique(data[[i]])
-     data[[i]] = factor(data[[i]],levels =unique(data[[i]]) )
-     levels(data[[i]])
-     data[i] = data[[i]]
-     colbar <-length(unique(data[[i]]))
-     mi = RColorBrewer::brewer.pal(9,"Set1")
-     fil_colors = mi[1:colbar ]
-     names(fil_colors ) = unique(data$KOWT_level)
-
-     p = ggraph(mygraph, layout = 'circlepack',weight = mean, sort.by = NULL, direction = "out") +
-       geom_node_circle(aes(fill = lab,color = as.factor(depth) ) ) +
-       scale_fill_manual(values= fil_colors ) +
-       scale_color_manual( values=c("0" = "white", "1" = "black", "2" = "black", "3" = "black", "4"="black", "5"="black", "6"="black", "7"="black"),guide = F ) +
-       geom_node_text( aes(label=new_label), size=6,repel = TRUE) +
-       # geom_node_label( aes(label=new_label), size=3,repel = TRUE) +
-       theme_void() +
-       theme(plot.margin = unit(rep(0,4), "cm"))#
-
-   }
-   return(p)
-
- }
-
-#--如果数据中存在两个king，则无法运行，所以，这里去掉古菌OTU。
-ps.bac <- ps %>% subset_taxa.wt("Kingdom", id) 
-ps.bac
-
-p = micro_maptree(ps = ps.bac,
-                  Top = 100,
-                  labtab =  NULL,
-                  seed = 11)
-p
-
-FileName <- paste(maptpath,"maptree", ".pdf", sep = "")
-ggsave(FileName, p,width = 18,height = 16)
-
-
-FileName <- paste(maptpath,"maptree", ".png", sep = "")
-ggsave(FileName, p,width = 18,height = 16,dpi = 72)
-
 ```
 
 
 
-#---5.功能预测
-#--Tax4Fun2功能预测#----
+## 5.功能预测
+
+### Tax4Fun2功能预测
+
+
 ```{r}
-funcpath = paste(otupath,"/Tax4Fun2/",sep = "")
-dir.create(funcpath)
 
-path_to_reference_data = "D:/public/Tax4Fun2/Tax4Fun2_ReferenceData_v2"
-otudir = funcpath
-#加载
-library(Tax4Fun2)
-#物种注释
-#指定 OTU 代表序列、Tax4Fun2 库的位置、参考数据库版本、序列比对（blastn）线程数等
-runRefBlast(path_to_otus = './data/otu.fa', 
-            path_to_reference_data = path_to_reference_data, 
-            path_to_temp_folder = otudir, database_mode = 'Ref100NR', 
-            use_force = TRUE, num_threads = 4)
+# funcpath = paste(otupath,"/Tax4Fun2/",sep = "")
+# dir.create(funcpath)
+
+# 首先配置数据库
+## buildReferenceData(path_to_working_directory = '.', use_force = FALSE, install_suggested_packages = TRUE)
+# path_to_reference_data = "./Tax4Fun2_ReferenceData_v2"
 
 
-#预测群落功能
-#指定 OTU 丰度表、Tax4Fun2 库的位置、参考数据库版本、上步的物种注释结果路径等
-makeFunctionalPrediction(path_to_otu_table = './data/otu.txt',
-                         path_to_reference_data = path_to_reference_data, 
-                         path_to_temp_folder = otudir, 
-                         database_mode = 'Ref100NR', 
-                         normalize_by_copy_number = TRUE,
-                         min_identity_to_reference = 0.97, 
-                         normalize_pathways = FALSE)
+# otudir = funcpath
+# #加载
+# library(Tax4Fun2)
+# #物种注释
+# #指定 OTU 代表序列、Tax4Fun2 库的位置、参考数据库版本、序列比对（blastn）线程数等
+# runRefBlast(path_to_otus = './data/otu.fa', 
+#             path_to_reference_data = path_to_reference_data, 
+#             path_to_temp_folder = otudir, database_mode = 'Ref100NR', 
+#             use_force = TRUE, num_threads = 4)
+# 
+# 
+# #预测群落功能
+# #指定 OTU 丰度表、Tax4Fun2 库的位置、参考数据库版本、上步的物种注释结果路径等
+# makeFunctionalPrediction(path_to_otu_table = './data/otu.txt',
+#                          path_to_reference_data = path_to_reference_data, 
+#                          path_to_temp_folder = otudir, 
+#                          database_mode = 'Ref100NR', 
+#                          normalize_by_copy_number = TRUE,
+#                          min_identity_to_reference = 0.97, 
+#                          normalize_pathways = FALSE)
 
 
 ```
 
 
-#--Funguild功能预测#----
+### Funguild功能预测
+
+
 ```{r}
-
-library(EasyStat)
-
-
-Fungi = F
-if (Fungi == T ) {
+  library(EasyStat)
   # 加载R包
   library(microeco)
   # 加载ggplot2绘图包并设置样式
@@ -5321,7 +5055,7 @@ if (Fungi == T ) {
   library(magrittr)
   p_list = c("ggplot2", "BiocManager", "devtools","picante", "GUniFrac", "ggalluvial", "rgexf")
   for(p in p_list){if (!requireNamespace(p)){install.packages(p)}
-    library(p, character.only = T, quietly = T, warn.conflicts = F)}
+    library(p, character.only = TRUE, quietly = TRUE, warn.conflicts = F)}
   
   ps = readRDS("./data/dataNEW/ps_ITS.rds")
   # ps = ps
@@ -5351,14 +5085,11 @@ if (Fungi == T ) {
   dir.create(fugipath)
   # dir.create("./result_and_plot/Base_diversity_ITS/OTU_220921//funguild")
   write.csv(data,paste(fugipath ,"/funguild.csv",sep = ""))
-}
+
 
 #----FAPROTAX#---
-
-Bca = T
-install.packages("VGAM")
-
-if (Bca ==T ) {
+# install.packages("VGAM")
+ps = readRDS("./data/dataNEW/ps_16s.rds")
   # 加载R包
   library(microeco)
   # 加载ggplot2绘图包并设置样式
@@ -5370,11 +5101,7 @@ if (Bca ==T ) {
   library(ggClusterNet)
   library(phyloseq)
   library(magrittr)
-  p_list = c("ggplot2", "BiocManager", "devtools","picante", "GUniFrac", 
-             "ggalluvial", "rgexf")
-  # for(p in p_list){if (!requireNamespace(p)){install.packages(p)}
-  #   library(p, character.only = T, quietly = T, warn.conflicts = F)}
-  
+
   # ps = readRDS("./data/dataNEW/ps_16s.rds")
   ps = ps %>%
     filter_OTU_ps(500)
@@ -5392,35 +5119,30 @@ if (Bca ==T ) {
   t2 = trans_func$new(dataset)
   t2$cal_spe_func()
   t2$res_spe_func[1:5, 1:6]
-  
   data = t2$res_spe_func
-  
   data = data[rowSums(data)> 0,]
-  
   betapath = paste(otupath,"/FAPROTAX/",sep = "")
   dir.create(betapath)
-  
-  
   # dir.create("./result_and_plot/Base_diversity_16s//OTU_220921//FAPROTAX")
-  
   write.csv(data,paste(betapath,"/FAPROTAX.csv",sep = ""))
   # 查看功能 分组列表
   t2$func_group_list
   # 查看某一类
   t2$show_prok_func("methanotrophy")
 
-}
-
-
 ```
 
----6.其他微生物组分析（环境因子等）
+## 6.其他微生物组分析（环境因子等）
 
 
+### 其他微生物分析（环境因子，系统发育等）
 
-#---6.其他微生物分析（环境因子，系统发育等）
-#--导入数据#----
+
+导入数据
+
+
 ```{r}
+
 env = read.csv("./data/dataNEW/env.csv")
 head(env)
 envRDA = env
@@ -5429,23 +5151,19 @@ row.names(envRDA) = env$ID
 envRDA$ID = NULL
 head(envRDA)
 
-
-if (is.na(match("Fungi",id))) {
-  res1path <- "./result_and_plot/Micro_and_other_index_16s_220922/"
-
-} else if(is.na(match("Bacteria",id))) {
-  res1path <- "./result_and_plot/Micro_and_other_index_ITS/"
-}
-
-
+ res1path <- "./result_and_plot/Micro_and_other_index_16s/"
 dir.create(res1path)
-
 res1path
 
-
 ```
-#--环境因子差异分析出图#----
+
+
+### 环境因子差异分析出图
+
+
+
 ```{r}
+
 envpath = paste(res1path,"/env_difference_plot/",sep = "")
 dir.create(envpath)
 
@@ -5472,7 +5190,6 @@ result1 = EasyStat::FacetMuiPlotresultBox(data = data,
                                           result = result,
                                           sig_show ="abc",ncol = 5 )
 p1_1 = result1[[1]] + 
-  ggplot2::scale_x_discrete(limits = axis_order) + 
   mytheme1 +
   ggplot2::guides(fill = guide_legend(title = NULL)) +
   ggplot2::scale_fill_manual(values = colset1)
@@ -5485,7 +5202,7 @@ p1_1 = result1[[2]] %>% ggplot(aes(x=group , y=dd )) +
   facet_wrap(.~name,scales="free_y",ncol  = 3) +
   # theme_classic()+
   geom_text(aes(x=group , y=y ,label=stat)) +
-  ggplot2::scale_x_discrete(limits = axis_order) + 
+  # ggplot2::scale_x_discrete(limits = axis_order) + 
   mytheme1 +
   guides(color=guide_legend(title = NULL),
          shape=guide_legend(title = NULL),
@@ -5495,14 +5212,18 @@ p1_1 = result1[[2]] %>% ggplot(aes(x=group , y=dd )) +
 p1_1
 
 res = EasyStat::FacetMuiPlotresultBar(data = data,num = c(3:ncol(data)),result = result,sig_show ="abc",ncol = 5)
-p1_2 = res[[1]]+ scale_x_discrete(limits = axis_order) + guides(color = FALSE) +
+p1_2 = res[[1]]+ 
+  # scale_x_discrete(limits = axis_order) +
+  
+  guides(color = FALSE) +
   mytheme1+ 
   guides(fill = guide_legend(title = NULL))+
   scale_fill_manual(values = colset1)
 p1_2
 
 res = EasyStat::FacetMuiPlotReBoxBar(data = data,num = c(3:ncol(data)),result = result,sig_show ="abc",ncol = 5)
-p1_3 = res[[1]]+ scale_x_discrete(limits = axis_order) + 
+p1_3 = res[[1]]+ 
+  # scale_x_discrete(limits = axis_order) + 
   mytheme1 + 
   guides(fill = guide_legend(title = NULL))+
   scale_fill_manual(values = colset1)
@@ -5529,8 +5250,15 @@ ggsave(FileName, p1_3, width = ((1 + gnum) * 3), height = 4*gnum,limitsize = FAL
 
 ```
 
-#--环境因子相关分析#----
+
+
+###  环境因子相关分析
+
+
 ```{r}
+library(igraph)
+library(network)
+library(sna)
 
 corpath = paste(res1path,"/env_self_cor/",sep = "")
 dir.create(corpath)
@@ -5553,9 +5281,7 @@ dim(cor)
 ps_net = result[[3]]
 otu_table = as.data.frame(t(ggClusterNet::vegan_otu(ps_net)))
 # tax_table = as.data.frame(ggClusterNet::vegan_tax(ps_net))
-library(igraph)
-library(network)
-library(sna)
+
 netClu  = data.frame(ID = row.names(cor),group = "one")
 head(netClu)
 netClu$group = "one"
@@ -5591,358 +5317,26 @@ ggsave(FileName, p1, width = 10, height = 9,limitsize = FALSE)
 
 ```
 
-#--微生物和环境因子共排序RDA/CCA#----
+
+
+### 微生物和环境因子共排序RDA/CCA
+
+
+
 ```{r}
+ps = readRDS("./data/dataNEW/ps_16s.rds")
+
 RDApath = paste(res1path,"/RDA_CCA/",sep = "")
 dir.create(RDApath)
 
-RDA_CCA = function(otu = NULL,tax = NULL,map = NULL,ps = NULL,env = env,group = "Group",path = "./",chose.env = F){
-  library("vegan")
-  library("grid")
-  dir.create(path)
-  ps = ggClusterNet::inputMicro(otu,tax,map,tree,ps,group  = group)
-  ps
-  
-  # 相对丰度标准化编号：ps1_rela
-  
-  ps_rela  = phyloseq::transform_sample_counts(ps, function(x) x / sum(x) );ps_rela 
-  otu = as.data.frame(t(ggClusterNet::vegan_otu(ps_rela)))
-  mapping = as.data.frame( phyloseq::sample_data(ps_rela))
-  env.dat = env
-  samp.fg = colnames(otu)
-  env.st = vegan::decostand(env.dat, method="standardize", MARGIN=2,na.rm = TRUE)
-  samp.env= rownames(env.st)
-  my.env = match(samp.fg, samp.env)
-  env.st3 = na.omit(env.st[my.env, ])  # omit the NA rows if without fg data
-  samp.env= rownames(env.st3)
-  my.fg = match(samp.env, samp.fg)
-  otu = otu[, my.fg]
-  ##without Latitude and Longitude
-  env.st2=env.st3
-  # for CCA calculation
-  otu = t(otu)
-  rowSums(otu)
-  DCA= vegan::decorana(otu)  
-  xxa = as.data.frame(DCA$rproj)
-  if(max(xxa$DCA1)<=4 & max(xxa$DCA1)>=3){twochiose = "T"}else{twochiose = "F"}
-  if(max(xxa$DCA1) > 4 | twochiose == "T") {
-    ##choise CCA
-    C.whole = vegan::cca(otu, env.st3)  ##rda(otu, env.st2)
-    C.whole
-    # for env selection by CCA inflation factors
-    #Function vif.cca and alias.cca can be used to analyse linear dependencies among constraints and conditions.
-    inf_factor = vegan::vif.cca(C.whole)
-    
-    # delete varable with max inflation factor
-    na_env = which(is.na(inf_factor))
-    if(isTRUE(length(na_env) > "0") ){
-      inf_factor = inf_factor[-na_env]
-    }
-    
-    max_env = which(inf_factor == max(inf_factor,na.rm = TRUE))
-    env.st4 = env.st3
-    while ( inf_factor[max_env] > 20){
-      env.st4 = env.st4[,-max_env]
-      C.reduced = vegan::cca(otu, env.st4)
-      inf_factor = vegan::vif.cca(C.reduced)
-      max_env = which(inf_factor == max(inf_factor,na.rm = TRUE))
-    }
-    output2 = inf_factor ;output2
-    env.st4
-    
-    # for F and p values
-    ind.p = array(0,dim=c(1,ncol(env.st4)))
-    ind.F = array(0,dim=c(1,ncol(env.st4)))
-    for(j in 1:ncol(env.st4)){
-      ind.cca = vegan::cca(otu, env.st4[,j]) #ind.cca = cca(otu, env.st[,j], env.st[,-j])  #
-      ind.sig = anova(ind.cca,step=1000)
-      ind.p[1,j] = ind.sig$Pr[1]
-      ind.F[1,j] = ind.sig$F[1]
-    }
-    
-    colnames(ind.p) = colnames(env.st4)
-    inf_Fp=rbind(output2,ind.F,ind.p)
-    row.names(inf_Fp)=c("inf_factor","F","p")
-    
-    ##重新计算CCA
-    C.whole = vegan::cca(otu, env.st4)  ##rda(otu, env.st3)
-    x.sig = anova(C.whole)
-    x.p = x.sig$Pr[1] ;x.p
-    x.F = x.sig$F[1]  ;x.F
-    F1 <- paste("anova F: ",round(x.F, 2), sep = "")
-    pp1 = paste("p: ",round(x.p, 2), sep = "")
-    title = paste(F1," ",pp1, sep = "")
-    
-    output1 = summary(C.whole)
-    
-    str(output1)
-    a=output1$sites;a  ##样本坐标
-    b=output1$cont$importance;b ##特征值，解释??? #eigenvals(C.whole)
-    c=output1$biplot*5;c  ##环境因子坐标
-    
-    filenamea = paste(path,"cca_inf_Fp.txt",sep = "")
-    write.table(inf_Fp,file=filenamea,sep="\t",col.names=NA)
-    
-    
-    
-    ca1=round(b[2,1],2);ca1
-    ca2=round(b[2,2],2);ca2
+source("./function/rda-cca.R ")
 
-    aa = merge(a,mapping, by="row.names",all=F);aa
-    c = as.data.frame(c)
-    
-    library("ggplot2")
-    library(ggrepel)
-    # mi=c("#1B9E77" ,"#D95F02", "#7570B3","#E7298A","#E6AB02", "#B3DE69")
-    p=ggplot()+
-      geom_point(data=aa,aes(x=CCA1,y=CCA2, fill = Group),pch = 21,colour = "black",size = 4)+
-      geom_segment(data = c,aes(x = 0, y = 0, xend = CCA1, yend = CCA2), 
-                   arrow = arrow(angle=22.5,length = unit(0.2,"cm")),linetype=1, size=0.6,colour = "black")+
-      # stat_ellipse( data=aa,linetype = 2,level = 0.65,aes(x=CCA1,y=CCA2,group  =SampleType, colour =  SampleType))+
-      geom_text_repel(data = c,aes(x=CCA1,y=CCA2, label = row.names(c)))+
-      
-      labs(x=paste("CCA 1 (", ca1*100, "%)", sep=""),
-           y=paste("CCA 2 (", ca2*100, "%)", sep=""),
-           title=title)
-    
-    p
-    p = p+theme_bw()+
-      
-      #scale_y_continuous(expand = c(0,0))+
-      geom_hline(aes(yintercept=0), colour="black", linetype=2) +
-      geom_vline(aes(xintercept=0), colour="black", linetype="dashed") +
-      # scale_fill_manual(values = mi, guide = guide_legend(title = NULL))+
-      theme(
-        
-        panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(),
-        
-        plot.title = element_text(vjust = -8.5,hjust = 0.1),
-        axis.title.y =element_text(size = 24,face = "bold",colour = "black"),
-        axis.title.x =element_text(size = 24,face = "bold",colour = "black"),
-        axis.text = element_text(size = 20,face = "bold"),
-        axis.text.x = element_text(colour = "black",size = 14),
-        axis.text.y = element_text(colour = "black",size = 14),
-        legend.text = element_text(size = 15,face = "bold")
-        
-        
-      ) 
-    p
-    plotnamea = paste(path,"/CCA_env.pdf",sep = "")
-    ggsave(plotnamea, p, width = 8, height = 6, device = cairo_pdf, family = "Song")
-    
-    plotnamea2 = paste(path,"/CCA_env.jpg",sep = "")
-    ggsave(plotnamea2, p, width = 8, height = 6, device = cairo_pdf, family = "Song")
-    
-  } else if (max(xxa$DCA1) < 3| twochiose == "T" ){
-    ##choise RDA
-    C.whole = vegan::rda(otu, env.st2)
-    C.whole
-    
-    
+ps.r = ps %>% filter_OTU_ps(500)
 
-    if (chose.env == T) {
-      # for env selection by RDA inflation factors
-      
-      #Function vif.cca and alias.cca can be used to analyse linear dependencies among constraints and conditions.
-      inf_factor = vegan::vif.cca(C.whole)
-      inf_factor
-      
-      # delete varable with max inflation factor
-      na_env = which(is.na(inf_factor))
-      if(isTRUE(length(na_env) > "0") ){
-        inf_factor = inf_factor[-na_env]
-      }
-      
-      max_env = which(inf_factor == max(inf_factor,na.rm = TRUE))
-      env.st4 = env.st3
-      while ( inf_factor[max_env] > 20){
-        env.st4 = env.st4[,-max_env]
-        C.reduced = vegan::cca(otu, env.st4)
-        inf_factor = vegan::vif.cca(C.reduced)
-        max_env = which(inf_factor == max(inf_factor,na.rm = TRUE))
-      }
-      output2 = inf_factor ;output2
-      
-      
-      
-      ##重新计算rdA
-      C.whole = vegan::rda(otu, env.st4)  ##rda(otu, env.st3)
-    } else if (chose.env == F) {
-      
-      C.whole = vegan::rda(otu, env.st2)
-      C.whole
-      inf_factor = vegan::vif.cca(C.whole)
-      inf_factor
-      output2 = inf_factor ;output2
-      # for F and p values
-      ind.p = array(0,dim=c(1,ncol(env.st2)))
-      ind.F = array(0,dim=c(1,ncol(env.st2)))
-      for(j in 1:ncol(env.st2)){
-        ind.cca = vegan::cca(otu, env.st2[,j]) #ind.cca = cca(otu, env.st[,j], env.st[,-j])  #
-        ind.sig = anova(ind.cca,step=1000)
-        ind.p[1,j] = ind.sig$Pr[1]
-        ind.F[1,j] = ind.sig$F[1]
-      }
-      
-      colnames(ind.p) = colnames(env.st2)
-      inf_Fp=rbind(output2,ind.F,ind.p)
-      row.names(inf_Fp)=c("inf_factor","F","p")
-    }
-    
-    
-    
-    x.sig = anova(C.whole)
-    x.p = x.sig$Pr[1] ;x.p
-    x.F = x.sig$F[1]  ;x.F
-    F1 <- paste("anova F: ",round(x.F, 2), sep = "")
-    pp1 = paste("p: ",round(x.p, 2), sep = "")
-    title = paste(F1," ",pp1, sep = "")
-    
-    output1 = summary(C.whole)
-    
-    str(output1)
-    a=output1$sites;a  ##样本坐标
-    b=output1$cont$importance;b ##特征值，解释??? #eigenvals(C.whole)
-    c=output1$biplot;c  ##环境因子坐标
-
-    ca1=round(b[2,1],2);ca1
-    ca2=round(b[2,2],2);ca2
-    exp = c(ca1,ca2)
-    aa = merge(a,mapping, by="row.names",all=F);aa
-    c = as.data.frame(c)
-    
-    # library("ggplot2")
-    # library(ggrepel)
-    # mi=c("#1B9E77" ,"#D95F02", "#7570B3","#E7298A","#E6AB02", "#B3DE69")
-    p=ggplot()+
-      geom_point(data=aa,aes(x=RDA1,y=RDA2, fill = Group),pch = 21,colour = "black",size = 4)+
-      geom_segment(data = c,aes(x = 0, y = 0, xend = RDA1, yend = RDA2), 
-                   arrow = arrow(angle=22.5,length = unit(0.2,"cm")),linetype=1, size=0.6,colour = "black")+
-      # stat_ellipse( data=aa,linetype = 2,level = 0.65,aes(x=RDA1,y=RDA2,group  =SampleType, colour =  SampleType))+
-      ggrepel::geom_text_repel(data = c,aes(x=RDA1,y=RDA2, label = row.names(c)))+
-      
-      labs(x=paste("RDA 1 (", ca1*100, "%)", sep=""),
-           y=paste("RDA 2 (", ca2*100, "%)", sep=""),
-           title=title)
-    
-    p
-    p = p+theme_bw()+
-      
-      #scale_y_continuous(expand = c(0,0))+
-      geom_hline(aes(yintercept=0), colour="black", linetype=2) +
-      geom_vline(aes(xintercept=0), colour="black", linetype="dashed") +
-      # scale_fill_manual(values = mi, guide = guide_legend(title = NULL))+
-      theme(
-        
-        panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(),
-        
-        plot.title = element_text(vjust = -8.5,hjust = 0.1),
-        axis.title.y =element_text(size = 24,face = "bold",colour = "black"),
-        axis.title.x =element_text(size = 24,face = "bold",colour = "black"),
-        axis.text = element_text(size = 20,face = "bold"),
-        axis.text.x = element_text(colour = "black",size = 14),
-        axis.text.y = element_text(colour = "black",size = 14),
-        legend.text = element_text(size = 15,face = "bold")
-        
-        
-      ) 
-    p
-
-  }
-
-  p3 = p+ ggrepel::geom_text_repel(data=aa, aes_string(x=colnames(aa)[2],y=colnames(aa)[3],label=colnames(aa)[1]),size=4)#?stat_el
-  p3
-  
-  return(list(p,aa,p3,inf_Fp,c,title,exp))
-  
-}
-
-
-RDA_CCA_explain_percent = function(ps = ps,env.dat = envRDA){
-  #--变量相对丰度标准化编号：ps1_rela
-  
-  ps_rela  = phyloseq::transform_sample_counts(ps, function(x) x / sum(x) );ps_rela 
-  otu = as.data.frame(t(ggClusterNet::vegan_otu(ps_rela)))
-  mapping = as.data.frame( phyloseq::sample_data(ps_rela))
-  
-  
-  # match env and fg datasets
-  samp.fg = colnames(otu)
-  env.st = vegan::decostand(env.dat, method="standardize", MARGIN=2,na.rm = TRUE)#
-  samp.env= rownames(env.st)
-  my.env = match(samp.fg, samp.env)
-  env.st2 = na.omit(env.st[my.env, ])  # omit the NA rows if without fg data
-  samp.env= rownames(env.st2)
-  my.fg = match(samp.env, samp.fg)
-  otu = otu[, my.fg]
-  
-  # for CCA calculation
-  otu = t(otu)
-  C.whole = vegan::rda(otu, env.st2)
-  C.whole
-  
-  #----------------------------------------选择环境变量-----------------------------
-  inf_factor = vegan::vif.cca(C.whole)
-  inf_factor
-  
-  # delete varable with max inflation factor
-  na_env = which(is.na(inf_factor))
-  if(isTRUE(length(na_env) > "0") ){
-    inf_factor = inf_factor[-na_env]
-  }
-  
-  max_env = which(inf_factor == max(inf_factor,na.rm = T))
-  env.st4 = env.st2
-  
-  while ( inf_factor[max_env] > 20){
-    env.st4 = env.st4[,-max_env]
-    C.reduced = vegan::cca(otu, env.st4)
-    inf_factor = vegan::vif.cca(C.reduced)
-    max_env = which(inf_factor == max(inf_factor,na.rm = T ))
-  }
-  
-  
-  output2 = inf_factor ;output2
-  
-  C.whole = vegan::rda(otu, env.st4)  ##rda(otu, env.st3)
-  total.chi = C.whole$tot.chi
-  ind.p = array(0,dim=c(1,ncol(env.st4)))
-  for(j in 1:ncol(env.st4)){
-    # j = 1
-    ind.par = vegan::rda(otu, env.st4[,j], env.st4[,-j])
-    ind.chi = ind.par$CCA$tot.chi
-    ind.per = ind.chi/total.chi
-    ind.p[j] = ind.per
-  }
-  ind.p
-  
-  rowname = colnames(env.st4);rowname
-  out = matrix(data=NA,ncol=length(colnames(env.st4)),nrow=1);out
-  out = ind.p
-  rownames(out) = "percent"
-  colnames(out) = rowname
-  out
-  
-  
-  
-  #------提取解释比例
-  total.chi = C.whole$tot.chi;total.chi
-  total.constrained = C.whole$CCA$tot.chi ; total.constrained
-  # 解释的比例
-  explained.percent = (total.constrained) / total.chi;explained.percent
-  # 未解释的比例
-  unexplained.percent = (total.chi - total.constrained) / total.chi;unexplained.percent
-  exp = data.frame(ID = c("explained.percent","unexplained.percent"),count = c(explained.percent,unexplained.percent))
-  exp
-  return(list(out,exp))
-}
-
-result = RDA_CCA(ps = ps_Rlefse,
+result = RDA_CCA(ps = ps.r,
                  env = envRDA,
                  path = RDApath,
-                 chose.env = F
+                 chose.env = FALSE
                  )
 #提取图片
 p1 = result[[1]] + mytheme1 + scale_fill_manual(values = colset1)
@@ -5975,7 +5369,7 @@ plotnamea4 = paste(RDApath,"/RDA_envlabelnew.png",sep = "")
 ggsave(plotnamea4, p2, width = 18, height = 12)# , device = cairo_pdf, family = "Song"
 
 
-result = RDA_CCA_explain_percent(ps = ps_Rlefse,
+result = RDA_CCA_explain_percent(ps = ps.r,
                                  env.dat = envRDA)
 out = result[[1]]
 wxp = result[[2]]
@@ -5987,7 +5381,11 @@ write.csv(exp,filenamea)
 
 ```
 
-#--层次分割RDA/CCA#----
+
+### 层次分割RDA/CCA
+
+
+
 ```{r}
 library(rdacca.hp)
 library(vegan)
@@ -5995,176 +5393,7 @@ library(ggClusterNet)
 library(tidyverse)
 hpPath = paste(res1path,"/rdacca.hp/",sep = "")
 dir.create(hpPath)
-
-rdacca.hp.micro.p <- function(OTU = mite,
-                              env = env1,
-                              hpPath = hpPath,
-                              cca  = FALSE,
-                              dbRDA = FALSE,
-                              rep = 9
-){
-  set.seed(123)
-  permu_hp <- permu.hp(dv =OTU, iv = env, method = 'RDA', type = 'adjR2', permutations = rep)
-  permu_hp
-  #简单作图
-  permu_hp$Variables <- rownames(permu_hp)
-  permu_hp$p <- unlist(lapply(as.character(permu_hp$'Pr(>I)'), function(x) unlist(strsplit(x, ' '))[2]))
-  #如需输出层次分割结果
-  dat = permu_hp %>% as.data.frame() %>% arrange(desc(Individual))
-  dat$id = row.names(dat)
-  dat$id = factor(dat$id,levels = dat$id)
-  
-  p = ggplot(dat) + 
-    geom_bar(aes(x = id,y = Individual ),stat = "identity",colour="black",fill="#9ACD32" ) +
-    geom_text(aes(x = id,y = Individual ,label = `Pr(>I)`), vjust = -0.3) +
-    theme_classic()
-  
-  filename = paste(hpPath,'Mciro.rda.hp.p.csv',sep = "")
-  write.csv(dat,filename)
-  filename = paste(hpPath,'Micro.rda.hp.p.pdf',sep = "")
-  ggsave(filename,p)
-  filename = paste(hpPath,'Micro.rda.hp.p.jpg',sep = "")
-  ggsave(filename,p)
-  
-  ###典范对应分析（CCA）
-  
-  #不同于 RDA，CCA 中的物种丰度一般不做 Hellinger 转化处理，可直接使用原始丰度矩阵
-  #使用层次分割在 CCA 中分解每个环境变量的解释，详情 ?rdacca.hp
-  #本示例计算校正后的 R2，在这里默认基于 1000 次置换获取对 CCA 中校正后 R2 的估计
-  
-  if (cca == TRUE) {
-    set.seed(123)
-    permu_hp <- permu.hp(dv =OTU, iv = env, method = 'CCA', type = 'adjR2', permutations = rep)
-    
-    #简单作图
-    permu_hp$Variables <- rownames(permu_hp)
-    permu_hp$p <- unlist(lapply(as.character(permu_hp$'Pr(>I)'), function(x) unlist(strsplit(x, ' '))[2]))
-    #如需输出层次分割结果
-    dat = permu_hp %>% as.data.frame() %>% arrange(desc(Individual))
-    dat$id = row.names(dat)
-    dat$id = factor(dat$id,levels = dat$id)
-    
-    p = ggplot(dat) + 
-      geom_bar(aes(x = id,y = Individual ),stat = "identity",colour="black",fill="#9ACD32" ) +
-      geom_text(aes(x = id,y = Individual ,label = `Pr(>I)`), vjust = -0.3) +
-      theme_classic()
-    
-    filename = paste(hpPath,'Mciro.cca.hp.p.csv',sep = "")
-    write.csv(dat,filename)
-    filename = paste(hpPath,'Micro.cca.hp.p.pdf',sep = "")
-    ggsave(filename,p)
-    filename = paste(hpPath,'Micro.cca.hp.p.jpg',sep = "")
-    ggsave(filename,p)
-  }
-  
-  
-  
-  if (dbRDA == TRUE) {
-    set.seed(123)
-    permu_hp <- permu.hp(dv =OTU, iv = env, method = 'dbRDA', type = 'adjR2', permutations = rep)
-    
-    #简单作图
-    permu_hp$Variables <- rownames(permu_hp)
-    permu_hp$p <- unlist(lapply(as.character(permu_hp$'Pr(>I)'), function(x) unlist(strsplit(x, ' '))[2]))
-    #如需输出层次分割结果
-    dat = permu_hp %>% as.data.frame() %>% arrange(desc(Individual))
-    dat$id = row.names(dat)
-    dat$id = factor(dat$id,levels = dat$id)
-    
-    p = ggplot(dat) + 
-      geom_bar(aes(x = id,y = Individual ),stat = "identity",colour="black",fill="#9ACD32" ) +
-      geom_text(aes(x = id,y = Individual ,label = `Pr(>I)`), vjust = -0.3) +
-      theme_classic()
-    filename = paste(hpPath,'Mciro.dbRDA.hp.p.csv',sep = "")
-    write.csv(dat,filename)
-    filename = paste(hpPath,'Micro.dbRDA.hp.p.pdf',sep = "")
-    ggsave(filename,p)
-    filename = paste(hpPath,'Micro.dbRDA.hp.p.jpg',sep = "")
-    ggsave(filename,p)
-  }
-}
-
-
-
-
-rdacca.hp.micro <- function(ps,
-                            OTU = mite,
-                            env = env1,
-                            hpPath = hpPath,
-                            cca  = FALSE
-                            ){
-  ###冗余分析（RDA）
-  mite.hel <- decostand(OTU, method = 'hellinger')
-  #使用层次分割在 RDA 中分解每个环境变量的解释，详情 ?rdacca.hp
-  #本示例计算校正后的 R2，RDA 默认使用 Ezekiel 公式计算调整后的 R2
-  mite.rda.hp <- rdacca.hp(mite.hel, env, method = 'RDA', type = 'adjR2', scale = FALSE)
-  # mite.rda.hp
-  # plot(mite.rda.hp)
-  #如需输出层次分割结果
-  dat = mite.rda.hp$Hier.part %>% as.data.frame() %>% arrange(desc(Individual))
-  dat$id = row.names(dat)
-  dat$id = factor(dat$id,levels = dat$id)
-  p = ggplot(dat) + geom_bar(aes(x = id,y = Individual ),stat = "identity",colour="black",fill="#9ACD32" ) + theme_classic()
-  
-  filename = paste(hpPath,'Mciro.rda.hp.csv',sep = "")
-  write.csv(dat,filename)
-  filename = paste(hpPath,'Micro.rda.hp.pdf',sep = "")
-  ggsave(filename,p)
-  filename = paste(hpPath,'Micro.rda.hp.jpg',sep = "")
-  ggsave(filename,p)
-  
-  ###典范对应分析（CCA）
-  
-  #不同于 RDA，CCA 中的物种丰度一般不做 Hellinger 转化处理，可直接使用原始丰度矩阵
-  #使用层次分割在 CCA 中分解每个环境变量的解释，详情 ?rdacca.hp
-  #本示例计算校正后的 R2，在这里默认基于 1000 次置换获取对 CCA 中校正后 R2 的估计
-  
-  if (cca == TRUE) {
-    set.seed(123)
-    mite.cca.hp <- rdacca.hp(mite, env, method = 'CCA', type = 'adjR2', scale = FALSE, n.perm = 10)
-    mite.cca.hp
-    plot(mite.cca.hp)
-    #如需输出层次分割结果
-    dat = mite.cca.hp$Hier.part %>% as.data.frame() %>% arrange(desc(Individual))
-    dat$id = row.names(dat)
-    dat$id = factor(dat$id,levels = dat$id)
-    p = ggplot(dat) + geom_bar(aes(x = id,y = Individual ),stat = "identity",colour="black",fill="#9ACD32" ) + theme_classic()
-    
-    filename = paste(hpPath,'Mciro.cca.hp.csv',sep = "")
-    write.csv(dat,filename)
-    filename = paste(hpPath,'Micro.cca.hp.pdf',sep = "")
-    ggsave(filename,p)
-    filename = paste(hpPath,'Micro.cca.hp.jpg',sep = "")
-    ggsave(filename,p)
-  }
-  
-  
- 
-
-  mite.bray <- vegdist(OTU, method = 'bray')
- 
-  mite.cap.hp <- rdacca.hp(mite.bray, env, method = 'dbRDA', type = 'adjR2', scale = FALSE)
-  #输出层次分割结果
-  dat = mite.cap.hp$Hier.part %>% as.data.frame() %>% arrange(desc(Individual))
-  dat$id = row.names(dat)
-  dat$id = factor(dat$id,levels = dat$id)
-  p = ggplot(dat) + geom_bar(aes(x = id,y = Individual ),stat = "identity",colour="black",fill="#9ACD32" ) + theme_classic()
-  p
-  filename = paste(hpPath,'Mciro.dbRDA.hp.csv',sep = "")
-  write.csv(dat,filename)
-  filename = paste(hpPath,'Micro.dbRDA.hp.pdf',sep = "")
-  ggsave(filename,p)
-  filename = paste(hpPath,'Micro.dbRDA.hp.jpg',sep = "")
-  ggsave(filename,p)
-}
-
-
-
-rdacca.hp.micro(OTU = ps %>% filter_OTU_ps(500) %>%vegan_otu() %>% as.data.frame(),
-                env = envRDA[,1:5],
-                hpPath = hpPath,
-                cca = FALSE
-                )
+source("./function/rdacca.hp.micro.p.R")
 
 rdacca.hp.micro.p(
   OTU = ps %>% filter_OTU_ps(200) %>%vegan_otu() %>% as.data.frame(),
@@ -6174,23 +5403,36 @@ rdacca.hp.micro.p(
   dbRDA = FALSE
 )
 
+
 ```
 
-#---基于dmm进行非限制性聚类分析-寻找响应群落的因子#----
+### 基于dmm进行非限制性聚类分析-寻找响应群落的因子
+
+
 ```{r}
 
-dmm.Micro = function(ps.1 = ps,
-         num = 3,
-         path = dmmpath
-         ){
+library(dplyr)
+library(microbiome)
+library(DirichletMultinomial)
+library(reshape2)
+library(magrittr)
+library(ggClusterNet)
+
+ps = readRDS("./data/dataNEW/ps_16s.rds")
+ps.1 = ps %>% filter_OTU_ps(200)
+
+dmmPath = paste(res1path,"/dmm/",sep = "")
+dir.create(dmmPath)
+
+
+num = 3
+path = dmmPath
+
   
-  dat<-abundances(ps.1)#222个样本中核心物种的丰富度，行为种名，列为样本对应丰富度
-  count<-as.matrix(t(dat))#将核心群的丰度数据转置且变为矩阵，行为样本数，列为不同的种名
-  fit<-lapply(1:num,dmn,count=count,verbose=TRUE)#lapply函数调用函数dmn，对样本计数矩阵拟合多项式模型
-  
-  
-  #群落类型数设为3，得到三个dmn，
-  
+dat<-abundances(ps.1)#222个样本中核心物种的丰富度，行为种名，列为样本对应丰富度
+count<-as.matrix(t(dat))#将核心群的丰度数据转置且变为矩阵，行为样本数，列为不同的种名
+fit<-lapply(1:num,dmn,count=count,verbose=TRUE)#lapply函数调用函数dmn，对样本计数矩阵拟合多项式模型
+#群落类型数设为3，得到三个dmn，
   #判断拟合效果
   lplc<-sapply(fit,laplace)#laplace获取拟合的模型的参数
   aic<-sapply(fit,AIC)
@@ -6229,29 +5471,13 @@ dmm.Micro = function(ps.1 = ps,
   }
   
   
-}
-
-
-library(dplyr)
-library(microbiome)
-library(DirichletMultinomial)
-library(reshape2)
-library(magrittr)
-library(ggClusterNet)
-ps.1 = ps %>% filter_OTU_ps(200)
-
-dmmPath = paste(res1path,"/dmm/",sep = "")
-dir.create(dmmPath)
-
-
-dmm.Micro (ps.1 = ps.1,
-           num = 3,
-           path = dmmPath)
-
 ```
 
-#--微生物群落和环境Science组合图表#----
+
+### 微生物群落和环境Science组合图表
+
 ```{r}
+
 compath = paste(res1path,"/Conbine_env_plot/",sep = "")
 dir.create(compath)
 
@@ -6332,22 +5558,28 @@ ggsave(FileName, p1,width = 15,height = 10)
 
 ```
 
-#--随机森林回归最重要的指标#-----
+
+### 随机森林回归最重要的指标
+
+
+
 ```{r}
 #--随机森林回归最重要的指标#--------
-ramdom_env.plot <- function(
-  ps = ps,
-  env = env,
-  seed = 1
-){
-  otu<- as.data.frame(t(ggClusterNet::vegan_otu(ps)))
-  map <- design <- phyloseq::sample_data(ps)
-  aa<-lapply(otu, function(x) as.numeric(as.character(x))) 
-  aa<-as.data.frame(aa)
-  otu<-aa
-  dist= vegan::vegdist(t(otu), method="bray") 
-  nmds= vegan::monoMDS(dist) 
-  index = as.data.frame(nmds$points)
+
+rampath = paste(res1path,"/Random_env/",sep = "")
+dir.create(rampath)
+ps  = ps
+env = envRDA 
+seed = 1
+
+otu<- as.data.frame(t(ggClusterNet::vegan_otu(ps)))
+map <- design <- phyloseq::sample_data(ps)
+aa<-lapply(otu, function(x) as.numeric(as.character(x))) 
+aa<-as.data.frame(aa)
+otu<-aa
+dist= vegan::vegdist(t(otu), method="bray") 
+nmds= vegan::monoMDS(dist) 
+index = as.data.frame(nmds$points)
   index<-cbind(design,index) 
   NMDS1<- cbind(env,MDS1 = index$MDS1)
   set.seed(seed)
@@ -6361,17 +5593,10 @@ ramdom_env.plot <- function(
     labs(y="", x="", title = "",size=9)+
     theme_bw() +
     theme(axis.text=element_text(colour='black',size=9))
-  return(list(df,p))
-  
-}
 
-rampath = paste(res1path,"/Random_env/",sep = "")
-dir.create(rampath)
 
-result <- ramdom_env.plot(ps  = ps,env = envRDA )
-p <- result[[2]]
 p
-data = result[[1]]
+data = df
 head(data)
 hit <- dim(envRDA)[2]
 hit
@@ -6548,8 +5773,13 @@ write.csv(dat,FileName)
 
 ```
 
-#--高丰度微生物和环境因子的关系探索#----
+
+### 高丰度微生物和环境因子的关系探索
+
+
 ```{r}
+
+
 cor_env_ggcorplot <- function(
   env1 = env1,
   env2 = env2,
@@ -6753,141 +5983,15 @@ for (jj in 2:6) {
   
 }
 
+
 ```
 
 
-#--变化福度大的微生物和环境因子的关系探索#----
+### 变化福度大的微生物和环境因子的关系探索
+
+
 ```{r}
-cor_env_ggcorplot <- function(
-  env1 = env1,
-  env2 = env2,
-  label =  T,
-  col_cluster = T,
-  row_cluster = T,
-  method = "spearman",
-  r.threshold=0.6,
-  p.threshold=0.05,
-  theme.size = 10
-  
-){
 
-  if (dim(env2)[2] == 1) {
-    env2 = env2
-  } else {
-    env2 <- env2[match(row.names(env1),row.names(env2)),]
-  }
-
-  env0 <- cbind(env1,env2)
-  occor = psych::corr.test(env0,use="pairwise",method=method,adjust="fdr",alpha=.05)
-  occor.r = occor$r
-  occor.p = occor$p
-  
-  occor.r[occor.p > p.threshold&abs(occor.r) < r.threshold] = 0
-  
-  head(env0)
-  # data[data > 0.3]<-0.3
-  #drop gene column as now in rows
-  
-  if (col_cluster) {
-    clust <- hclust(dist(env1 %>% as.matrix()%>% t())) # hclust with distance matrix
-    ggtree_plot <- ggtree::ggtree(clust)
-  }
-  if (row_cluster) {
-    v_clust <- hclust(dist(env2 %>% as.matrix() %>% t()))
-    ggtree_plot_col <- ggtree::ggtree(v_clust) + ggtree::layout_dendrogram()
-  }
-  
-  
-  occor.r = as.data.frame(occor.r)
-  
-  if (dim(env2)[2] == 1) {
-    
-    data <- occor.r[colnames(env1),colnames(env2)]
-    data = data.frame(row.names = colnames(env1),data)
-    colnames(data) = colnames(env2)
-    data$id = row.names(data)
-  } else {
-    data <- occor.r[colnames(env1),colnames(env2)]
-    data$id = row.names(data)
-  }
-  
-  
-
-  pcm = reshape2::melt(data, id = c("id"))
-  head(pcm)
-  occor.p = as.data.frame(occor.p)
-  
-  if (dim(env2)[2] == 1) {
-    
-    data <- occor.p[colnames(env1),colnames(env2)]
-    data = data.frame(row.names = colnames(env1),data)
-    colnames(data) = colnames(env2)
-    data$id = row.names(data)
-  } else {
-    data <- occor.p[colnames(env1),colnames(env2)]
-    data$id = row.names(data)
-    
-  }
-  
-
-  pcm2 = reshape2::melt(data, id = c("id"))
-  head(pcm2)
-  colnames(pcm2)[3] = "p"
-  
-  pcm2$lab = pcm2$p 
-  pcm2$lab[pcm2$lab < 0.001] = "**"
-  pcm2$lab[pcm2$lab < 0.05] = "*"
-  pcm2$lab[pcm2$lab >= 0.05] = ""
-  pcm3 = pcm %>% left_join(pcm2)
-  
-  
-  p1 = ggplot(pcm3, aes(y = id, x = variable)) + 
-    # geom_point(aes(size = value,fill = value), alpha = 0.75, shape = 21) + 
-    geom_tile(aes(size = value,fill = value))+
-    scale_size_continuous(limits = c(0.000001, 100), range = c(2,25), breaks = c(0.1,0.5,1)) + 
-    geom_text(aes(label = lab)) +
-    labs( y= "", x = "", size = "Relative Abundance (%)", fill = "")  + 
-    # scale_fill_manual(values = colours, guide = FALSE) + 
-    scale_x_discrete(limits = rev(levels(pcm$variable)))  + 
-    scale_y_discrete(position = "right") +
-    scale_fill_gradientn(colours =colorRampPalette(c("#377EB8","#F7F4F9","#E41A1C"))(60)) +
-    theme(
-      panel.background=element_blank(),
-      panel.grid=element_blank(),
-      axis.text.x = element_text(colour = "black",size = theme.size,angle = 60,vjust = 1,hjust = 1)
-    )
-  
-
-  p2 = ggplot(pcm3, aes(y = id, x = variable)) + 
-    geom_point(aes(size = value,fill = value), alpha = 0.75, shape = 21) + 
-    scale_size_continuous(limits = c(0.000001, 100), range = c(2,25), breaks = c(0.1,0.5,1)) + 
-    geom_text(aes(label = lab)) +
-    labs( y= "", x = "", size = "Relative Abundance (%)", fill = "")  + 
-    # scale_fill_manual(values = colours, guide = FALSE) + 
-    scale_x_discrete(limits = rev(levels(pcm$variable)))  + 
-    scale_y_discrete(position = "right")  +
-    scale_fill_gradientn(colours =colorRampPalette(c("#377EB8","#F7F4F9","#E41A1C"))(60))  +
-    theme(
-      panel.background=element_blank(),
-      panel.grid=element_blank(),
-      axis.text.x = element_text(colour = "black",size = theme.size,angle = 60,vjust = 1,hjust = 1)
-    )
-  
-  if (col_cluster) {
-    p1 <- p1  %>%
-      aplot::insert_left(ggtree_plot, width=.2) 
-    p2 <- p2  %>%
-      aplot::insert_left(ggtree_plot, width=.2) 
-  }
-  
-  if (label) {
-    p1 <- p1  %>%
-      aplot::insert_top(ggtree_plot_col, height=.1)
-    p2 <- p2  %>%
-      aplot::insert_top(ggtree_plot_col, height=.1)
-  }
-  return(list(p1,p2))
-}
 
 heatpath = paste(res1path,"/CVmicro_env_hea_boplot/",sep = "")
 dir.create(heatpath)
@@ -6973,139 +6077,19 @@ for (j in 2:6) {
 ```
 
 
-#--基于网络模块和环境因子的关系分析#----
+### 基于网络模块和环境因子的关系分析
+
+
 ```{r}
 
-cor_env_ggcorplot <- function(
-  env1 = env1,
-  env2 = env2,
-  label =  T,
-  col_cluster = T,
-  row_cluster = T,
-  method = "spearman",
-  r.threshold=0.6,
-  p.threshold=0.05,
-  theme.size = 10
-  
-){
-
-  if (dim(env2)[2] == 1) {
-    env2 = env2
-  } else {
-    env2 <- env2[match(row.names(env1),row.names(env2)),]
-  }
-
-  env0 <- cbind(env1,env2)
-  occor = psych::corr.test(env0,use="pairwise",method=method,adjust="fdr",alpha=.05)
-  occor.r = occor$r
-  occor.p = occor$p
-  
-  occor.r[occor.p > p.threshold&abs(occor.r) < r.threshold] = 0
-  
-  head(env0)
-  # data[data > 0.3]<-0.3
-  #drop gene column as now in rows
-  
-  if (col_cluster) {
-    clust <- hclust(dist(env1 %>% as.matrix()%>% t())) # hclust with distance matrix
-    ggtree_plot <- ggtree::ggtree(clust)
-  }
-  if (row_cluster) {
-    v_clust <- hclust(dist(env2 %>% as.matrix() %>% t()))
-    ggtree_plot_col <- ggtree::ggtree(v_clust) + ggtree::layout_dendrogram()
-  }
-  
-  
-  occor.r = as.data.frame(occor.r)
-  
-  if (dim(env2)[2] == 1) {
-    
-    data <- occor.r[colnames(env1),colnames(env2)]
-    data = data.frame(row.names = colnames(env1),data)
-    colnames(data) = colnames(env2)
-    data$id = row.names(data)
-  } else {
-    data <- occor.r[colnames(env1),colnames(env2)]
-    data$id = row.names(data)
-  }
-  
-  
-
-  pcm = reshape2::melt(data, id = c("id"))
-  head(pcm)
-  occor.p = as.data.frame(occor.p)
-  
-  if (dim(env2)[2] == 1) {
-    
-    data <- occor.p[colnames(env1),colnames(env2)]
-    data = data.frame(row.names = colnames(env1),data)
-    colnames(data) = colnames(env2)
-    data$id = row.names(data)
-  } else {
-    data <- occor.p[colnames(env1),colnames(env2)]
-    data$id = row.names(data)
-    
-  }
-  
-
-  pcm2 = reshape2::melt(data, id = c("id"))
-  head(pcm2)
-  colnames(pcm2)[3] = "p"
-  
-  pcm2$lab = pcm2$p 
-  pcm2$lab[pcm2$lab < 0.001] = "**"
-  pcm2$lab[pcm2$lab < 0.05] = "*"
-  pcm2$lab[pcm2$lab >= 0.05] = ""
-  pcm3 = pcm %>% left_join(pcm2)
-  
-  
-  p1 = ggplot(pcm3, aes(y = id, x = variable)) + 
-    # geom_point(aes(size = value,fill = value), alpha = 0.75, shape = 21) + 
-    geom_tile(aes(size = value,fill = value))+
-    scale_size_continuous(limits = c(0.000001, 100), range = c(2,25), breaks = c(0.1,0.5,1)) + 
-    geom_text(aes(label = lab)) +
-    labs( y= "", x = "", size = "Relative Abundance (%)", fill = "")  + 
-    # scale_fill_manual(values = colours, guide = FALSE) + 
-    scale_x_discrete(limits = rev(levels(pcm$variable)))  + 
-    scale_y_discrete(position = "right") +
-    scale_fill_gradientn(colours =colorRampPalette(c("#377EB8","#F7F4F9","#E41A1C"))(60)) +
-    theme(
-      panel.background=element_blank(),
-      panel.grid=element_blank(),
-      axis.text.x = element_text(colour = "black",size = theme.size,angle = 60,vjust = 1,hjust = 1)
-    )
-  
-
-  p2 = ggplot(pcm3, aes(y = id, x = variable)) + 
-    geom_point(aes(size = value,fill = value), alpha = 0.75, shape = 21) + 
-    scale_size_continuous(limits = c(0.000001, 100), range = c(2,25), breaks = c(0.1,0.5,1)) + 
-    geom_text(aes(label = lab)) +
-    labs( y= "", x = "", size = "Relative Abundance (%)", fill = "")  + 
-    # scale_fill_manual(values = colours, guide = FALSE) + 
-    scale_x_discrete(limits = rev(levels(pcm$variable)))  + 
-    scale_y_discrete(position = "right")  +
-    scale_fill_gradientn(colours =colorRampPalette(c("#377EB8","#F7F4F9","#E41A1C"))(60))  +
-    theme(
-      panel.background=element_blank(),
-      panel.grid=element_blank(),
-      axis.text.x = element_text(colour = "black",size = theme.size,angle = 60,vjust = 1,hjust = 1)
-    )
-  
-  if (col_cluster) {
-    p1 <- p1  %>%
-      aplot::insert_left(ggtree_plot, width=.2) 
-    p2 <- p2  %>%
-      aplot::insert_left(ggtree_plot, width=.2) 
-  }
-  
-  if (label) {
-    p1 <- p1  %>%
-      aplot::insert_top(ggtree_plot_col, height=.1)
-    p2 <- p2  %>%
-      aplot::insert_top(ggtree_plot_col, height=.1)
-  }
-  return(list(p1,p2))
-}
+env = read.csv("./data/dataNEW/env.csv")
+head(env)
+envRDA = env
+head(env)
+row.names(envRDA) = env$ID
+envRDA$ID = NULL
+head(envRDA)
+ps = readRDS("./data/dataNEW/ps_16s.rds")
 
 id = sample_data(ps)$Group %>% unique()
 id
@@ -7158,7 +6142,6 @@ for (i in 1:length(id)) {
   write.csv(MEs,tablename)
   
   #--寻找对于某个环境因子作用最大的模块
-
  ramdom_Model_env.plot <- function(
     model = model,
     sink = env,
@@ -7325,8 +6308,13 @@ for (i in 1:length(id)) {
   
 ```
 
-#--细菌和环境因子的网络#----
+
+### 细菌和环境因子的网络
+
+
+
 ```{r}
+
 Envnetplot<- paste(res1path,"/Env_network",sep = "")
 dir.create(Envnetplot)
 
@@ -7399,7 +6387,11 @@ write.csv(data,tablename)
 
 ```
 
-#--网络属性和模块与环境因子相关#----
+
+### 网络属性和模块与环境因子相关
+
+
+
 ```{r}
 
 net.property_env = function(
@@ -7638,7 +6630,7 @@ net.property_env = function(
 }
 
 
-
+library(tidyverse)
 library(igraph)
 corpath = paste(res1path,"/env_difference_plot/",sep = "")
 dir.create(corpath)
@@ -7653,14 +6645,21 @@ net.property_env(
   select.mod = c("model_1","model_2","model_3"),
   select.env = "pH")
 
+
 ```
-#--细菌真菌-环境因子三者共网络#-----
+
+
+
+### 细菌-真菌-环境因子三者共线网
+
+
 ```{r}
+
 Envnetplot<- paste(res1path,"/16s_ITS_Env_network",sep = "")
 dir.create(Envnetplot)
 
 
-ps16s = ps0 %>% ggClusterNet::scale_micro()
+ps16s = readRDS("./data/dataNEW//ps_16s.rds") %>% ggClusterNet::scale_micro()
 psITS = readRDS("./data/dataNEW//ps_ITS.rds")%>% ggClusterNet::scale_micro()
 
 library(phyloseq)
@@ -7728,8 +6727,12 @@ write.csv(data,tablename)
 
 ```
 
-#---细菌和真菌OTU网络-域网络-二分网络#-----
+
+### 细菌和真菌OTU网络-域网络-二分网络
+
+
 ```{r}
+
 # 仅仅关注细菌和真菌之间的相关，不关注细菌内部和真菌内部相关
 
 Envnetplot<- paste(res1path,"/16S_ITS_network",sep = "")
@@ -7741,8 +6744,8 @@ psITS = readRDS("./data/dataNEW/ps_ITS.rds")
 #--细菌和真菌ps对象中的map文件要一样
 ps.merge <- ggClusterNet::merge16S_ITS(ps16s = ps16s,
                                        psITS = psITS,
-                                       N16s = 500,
-                                       NITS = 500
+                                       N16s = 300,
+                                       NITS = 300
 )
 
 ps.merge
@@ -7753,10 +6756,7 @@ head(map)
 map$Group = "one"
 phyloseq::sample_data(ps.merge) <- map
 
-
-
 data = NULL
-
 
 library(sna)
 library(igraph)
@@ -7819,8 +6819,13 @@ write.csv(result[[5]],tablename)
 
 ```
 
-#--细菌真菌任意水平二分网络#---------
+
+### 细菌真菌任意水平二分网络
+
+
+
 ```{r}
+
 library(tidyverse)
 
 # res1path = "result_and_plot/Micro_and_other_index_16s/"
@@ -7834,8 +6839,8 @@ psITS = readRDS("./data/dataNEW/ps_ITS.rds")
 #--细菌和真菌ps对象中的map文件要一样
 ps.merge <- merge16S_ITS(ps16s = ps16s,
                          psITS = psITS,
-                         N16s = 500,
-                         NITS = 500
+                         N16s = 300,
+                         NITS = 300
 )
 
 ps.merge
@@ -7960,8 +6965,10 @@ write.csv(result[[5]],tablename)
 ```
 
 
-##系统发育分析
+### 系统发育分析-准备数据
+
 ```{r}
+
 library(picante)
 library(ape)
 library(vegan)
@@ -7996,8 +7003,11 @@ n
 
 ```
 
-#--中性模型#----
+### 中性模型
+
+
 ```{r}
+
 neutralModel = function(otu = NULL,
                         tax = NULL,
                         map = NULL,
@@ -8151,7 +7161,7 @@ ggsave(FileName, p1,width = 12,height = 4)
 FileName <- paste(phypath,"1_neutral_modelCul", ".png", sep = "")
 ggsave(FileName, p1,width = 12,height = 4)
 
-#--系统发育信号-不用跑#----
+#--系统发育信号
 
 phyloSignal = function(otu = NULL,
                        tax = NULL,
@@ -8335,7 +7345,9 @@ write.csv(data,FileName)
 
 ```
 
-#--计算零模型-不用跑#----
+### 计算零模型
+
+
 ```{r}
 
 nullModel <- function(otu = NULL,
@@ -8515,8 +7527,10 @@ write.csv(ratiotab,FileName)
 
 ```
 
-#--BNTI#----
+### BNTI
+
 ```{r}
+
 bNTICul = function(otu = NULL,tax = NULL,map = NULL,tree = NULL ,ps = NULL,group  = "Group",num = 99,thread = 1){
   ps = inputMicro(otu,tax,map,tree,ps,group  = group)
   ps
@@ -8608,8 +7622,10 @@ write.csv(bNTI, filename)
 
 ```
 
-#--计算RCbray#----
+### 计算RCbray
+
 ```{r}
+
 RCbary = function(otu = NULL,tax = NULL,map = NULL,tree = NULL ,ps = NULL,group  = "Group",num = 99,thread = 1){
   ps_sub <- ps
   #----------------整理map文件
@@ -8739,7 +7755,9 @@ write.csv(RCbary,filename)
 ```
 
 
-#--BNTI和RCbray联合出图#----
+### BNTI和RCbray联合出图
+
+
 ```{r}
 
 bNTIRCPlot = function(otu = NULL,tax = NULL,
@@ -8880,11 +7898,11 @@ head(RCb)
 result = bNTIRCPlot(ps = psphy ,RCb  = RCb,bNTI = bNTI,group  = "Group")
 
 #--bNTI出图片
-p3 <- result[[1]] + mytheme1
+p3 <- result[[1]] 
 p3
 
 #RCbary可视化
-p4 <- result[[2]] + mytheme1
+p4 <- result[[2]] 
 p4
 
 #组合图片BNTI，RCbray
@@ -8924,8 +7942,11 @@ write.csv(dat,FileName, quote = F)
 
 ```
 
-#--环境因子和BetaNTI相关#----
+### 环境因子和BetaNTI相关
+
+
 ```{r}
+
 EnvCorbNTI = function(otu = NULL,
                       tax = NULL,
                       map = NULL,
@@ -9103,6 +8124,7 @@ ggsave(FileName, p6,width = 16,height = 14)
 FileName <- paste(phypath,"7_env_corWithBNTI", ".png", sep = "")
 ggsave(FileName, p6,width = 16,height = 14)
 
-
 ```
+
+
 

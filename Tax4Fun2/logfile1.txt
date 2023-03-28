@@ -1,0 +1,4 @@
+RefBlast
+Ref100NR
+./data/otus2.fa
+Tue Mar 28 11:54:53 2023

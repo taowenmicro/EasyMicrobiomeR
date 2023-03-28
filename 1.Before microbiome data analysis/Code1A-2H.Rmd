@@ -1,52 +1,42 @@
 ---
-title: "Using R in microbial analysis"
+  title: "Using R in microbial analysis"
 author: "Tao Wen(文涛)"
 date: "`r Sys.Date()`"
 output:
-  html_document:
-    df_print: paged
-    theme: cerulean
-    highlight: haddock
-    toc: yes
-    toc_depth: 3
-    toc_float:
-      collapsed: no
-      smooth_scroll: yes
-    code_fold: show
-  word_document:
-    toc: yes
-    toc_depth: '3'
   pdf_document:
-    toc: yes
-    toc_depth: '3'
-editor_options: 
+  toc: yes
+toc_depth: '3'
+word_document:
+  toc: yes
+toc_depth: '3'
+html_document:
+  df_print: paged
+theme: cerulean
+highlight: haddock
+toc: yes
+toc_depth: 3
+toc_float:
+  collapsed: no
+smooth_scroll: yes
+code_fold: show
+editor_options:
   chunk_output_type: console
 ---
 
 
 
-```{r setup, include = FALSE}
+  ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = T, echo=T, comment="#>", message=F, warning=F,
-	fig.align="center", fig.width=7, fig.height=5, dpi=150)
+  fig.align="center", fig.width=7, fig.height=5, dpi=150)
 ```
 
 
 # Title
-
-
 ## 1 Introduction
-
-
-
 ## 2 Before microbiome data analysis
-
-
 ### Microbial community data preparation
-
 ### visualization in R language
-
-
 
 ```{R}
 
@@ -54,7 +44,8 @@ knitr::opts_chunk$set(
 
 #### Code 1A（Example 1）
 
-如何导入微生物组数据
+# How to import microbiome data?
+getwd()
 
 ```{R}
 library(phyloseq)
@@ -71,230 +62,442 @@ library(phyloseq)
 library(Biostrings)
 # ?readDNAStringSet
 
-otu = read.delim("../data/otutab.txt",header = T,row.names = 1)
+otu = read.delim("./data/otutab.txt",row.names = 1)
 head(otu)
-metadata = read.delim("../data/metadata.tsv",row.names = 1)
-taxonomy = read.table("../data/taxonomy.txt", row.names=1,header = T)
+metadata = read.delim("./data/metadata.tsv",row.names = 1)
+taxonomy = read.delim("./data/taxonomy.txt", row.names=1)
 head(taxonomy)
-tree  = read_tree("../data/otus.tree")
-rep = readDNAStringSet("../data/otus.fa")
-rep
+tree  = read_tree("./data/otus.tree")
+rep = readDNAStringSet("./data/otus.fa")
 ```
-
 
 #### Code 1B（Example 2）
 
-基础包对微生物组数据处理
-
+# Using the R base package for statistical analysis
 
 ```{R}
-#--循环+sum统计测序深度
+#--Quantifying sequencing depth
 A= c()
 for (i in 1:dim(otu)[2]) {
   B = sum(otu[,i])
   A = c(A,B)
 }
 names(A) = colnames(otu)
-A#--可使用函数colSums(otu)替代
-
-#-计算物种相对丰度
+A
+#-Calculating relative abundance of species
 otu2 = as.matrix(otu)
 norm = otu2/A
 
-#使用base中的apply家族函数
+#Statistical analysis using apply() function in base package
 apply(otu,2,sum)
 
 ```
 
 ####  Code 1C（Example 3）
-
-
-示例二：plyr包处理微生物组数据
+# Processing microbiome data using the plyr package
 
 ```{R}
 library(plyr)
-
-otu = read.delim("../data/otutab.txt",header = T,row.names = 1)
-tax = read.delim("../data/taxonomy.txt",header = T,row.names = 1)
+?read.delim
+otu = read.delim("./data/otutab.txt",row.names = 1)
+tax = read.delim("./data/taxonomy.txt",row.names = 1)
 dat = cbind(otu,tax)
-#-指定列计算
+#-Performing calculations on a specific column
 ddply(dat,.(Phylum),summarize,meanWT1 = mean(WT1))
-#-应用于每一列
+#-Performing calculations on all columns
 ddply(dat,.(Phylum),colwise(mean))
 
 ```
 
-
-
 ####  Code 1D（Example 4）
-
-
-reshape2数据融合
+#Data reshaping using the reshape2 package
 
 ```{R}
 library(reshape2)
-otu = read.delim("./data/otutab.txt",header = T,row.names = 1)
+otu = read.delim("./data/otutab.txt",row.names = 1)
 head(otu)
 otu$ID = row.names(otu)
 dat <- melt(otu)
 head(dat)
 ```
 
-
 ####  Code 1E（Example 5）
-
-Example 5
-
-dplyr数据处理 和基于tidyverse风格的编程
+# Data processing with tidyverse
 
 ```{R}
 library(tidyverse)
-otu = read.delim("../data/otutab.txt",header = T,row.names = 1)
-tax = read.delim("../data/taxonomy.txt",header = T,row.names = 1)
-map= read.delim("../data/metadata.tsv",row.names = 1) 
+library(dplyr)
+library(tidyr)
+library(tibble)
+otu = read.delim("./data/otutab.txt",row.names = 1)
+tax = read.delim("./data/taxonomy.txt",row.names = 1)
+map= read.delim("./data/metadata.tsv",row.names = 1)
 map$ID = row.names(map)
 head(map)
 colnames(map)[6] = "Spe"
-
 otu2 = t(as.matrix(otu)) %>% as.data.frame()
 otu2$ID = row.names(otu2)
 tax$taxid = row.names(tax)
 head(tax)
-
 data = map %>% as.tibble() %>%
-  inner_join(otu2,by=  "ID") %>% 
+  inner_join(otu2,by=  "ID") %>%
   gather( taxa, count, starts_with("ASV_")) %>%
   inner_join(tax,by = c("taxa" = "taxid") )
 data
-#---随机森林建模
 
+#---Random Forest modeling
 library(randomForest)
-get_importance <- function(x){
-  rf <- randomForest(x[,3:ncol(x)], as.factor(x$Group), importance = T)
-  imps <- as.data.frame(rf$importance)
-  imps$variable <- row.names(imps)
-  # names(imps)[1] <- "PercIncMSE"
-  as_tibble(imps)
-}
-
-imps <- data %>% 
-  # filter(Compartment != "Bulk Soil" & Compartment != "Rhizoplane") %>% 
-  dplyr::select(Group,count, taxa, ID) %>% 
-  spread(taxa, count, fill = 0) %>% # 列表转化为数据，空白的地方填充0
-  nest() %>% 
-  mutate(imp = map(data, ~ get_importance(.)))
-
-top_otus <- imps %>% 
-  unnest(imp) %>% # tibble钟折叠的imp数据框展开分析
-  # group_by(Compartment, Site) %>% 
-  top_n(85, MeanDecreaseAccuracy) # 提取每个模型前85个个重要OTU
+# get_importance <- function(x){
+#   rf <- randomForest(x[,3:ncol(x)], as.factor(x$Group), importance = T)
+#   imps <- as.data.frame(rf$importance)
+#   imps$variable <- row.names(imps)
+#   # names(imps)[1] <- "PercIncMSE"
+#   as_tibble(imps)}
+#
+# imps <- data %>%
+#   dplyr::select(Group,count, taxa, ID) %>%
+#   spread(taxa, count, fill = 0) %>%
+#   mutate(imp = map(data, ~ get_importance(.)))
+#
+# top_otus <- imps %>%
+#   unnest(imp) %>%
+#   # group_by(Compartment, Site) %>%
+#   top_n(85, MeanDecreaseAccuracy) # Extracting the top 85 important OTUs from a Random Forest model
 
 ```
 
 
 ####  Code 2A（Example 6）
-
-Example 6
-
-微生物组数据可视化
-
-第一部分：使用ggplot2包可视化alpha多样性
+# Visualization of microbiome data
+# Part 1: Visualizing alpha diversity using ggplot2 package
 
 ```{R}
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro/alpha-diversity.R")
 index = c("Shannon","Inv_Simpson","Pielou_evenness","Simpson_evenness" ,"Richness" ,"Chao1","ACE" )
-alp = alpha(ps = ps,inde="Shannon",group = "Group",Plot = TRUE )
-index= alp
+library(ggClusterNet)
+ps = readRDS("./data/ps_liu.rds")
+samplesize = min(phyloseq::sample_sums(ps))
+ps11  = phyloseq::rarefy_even_depth(ps,sample.size = samplesize)
+mapping = phyloseq::sample_data(ps11)
+ps11 = phyloseq::filter_taxa(ps11, function(x) sum(x ) >0 , TRUE); ps11
+head(mapping)
+mapping$Group = as.factor(mapping$Group)
+mapping$Group
+count = as.data.frame(t(ggClusterNet::vegan_otu(ps11)))
+alpha=vegan::diversity(count, "shannon")
+x = t(count)
+head(x)
+Shannon = vegan::diversity(x)
+Shannon
+Inv_Simpson <- vegan::diversity(x, index = "invsimpson")
+Inv_Simpson
+S <- vegan::specnumber(x);S
+S2 = rowSums(x>0)
+Pielou_evenness <- Shannon/log(S)
+Simpson_evenness <- Inv_Simpson/S
+est <- vegan::estimateR(x)
+Richness <- est[1, ]
+Chao1 <- est[2, ]
+ACE <- est[4, ]
+report = cbind(Shannon, Inv_Simpson, Pielou_evenness, Simpson_evenness,
+               Richness, Chao1,ACE)
+head(report)
+index = merge(mapping,report , by="row.names",all=F)
 sel = c(match("Inv_Simpson",colnames(index)),
         match("Pielou_evenness",colnames(index)),
         match("Simpson_evenness",colnames(index)),
         match("Richness",colnames(index)),
         match("Chao1",colnames(index)),
         match("ACE",colnames(index)),
-        match("Shannon",colnames(index))
-)
+        match("Shannon",colnames(index)))
 n = length(sel) + 3
 data = cbind(data.frame(ID = 1:length(index$Group),group = index$Group),index[sel])
 head(data)
 result = EasyStat::MuiKwWlx2(data = data,num = c(3:(n -1)))
-
 result1 = EasyStat::FacetMuiPlotresultBox(data = data,num = c(3:(n -1)),
                                           result = result,
                                           sig_show ="abc",ncol = 3 )
-p1_1 = result1[[1]] + 
-  ggplot2::guides(fill = guide_legend(title = NULL)) 
+p1_1 = result1[[1]] +
+  ggplot2::guides(fill = guide_legend(title = NULL))
 p1_1
 
 ```
 
-第二部分，使用ggplot2包可视化alpha稀释曲线
-
-
+# Part 2: Visualizing alpha rarefaction curves using ggplot2 package
 
 ```{R}
 rare <- mean(phyloseq::sample_sums(ps))/10
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro\\alpha_rare_all.R",encoding = "utf-8")
-result = alpha_rare_all(ps = ps, group = "Group",
-                        method = "Richness",
-                        start = 100, step = rare)
-p2_1 <- result[[1]] +
-  guides(fill = guide_legend(title = NULL))
-p2_1
+ps = readRDS("./data/ps_liu.rds")
+all = c("observed" , "chao1"  , "diversity_inverse_simpson" , "diversity_gini_simpson",
+        "diversity_shannon"   ,   "diversity_fisher"   ,  "diversity_coverage"     ,    "evenness_camargo",
+        "evenness_pielou"    ,   "evenness_simpson"       ,    "evenness_evar" ,   "evenness_bulla",
+        "dominance_dbp"      ,  "dominance_dmn"        ,      "dominance_absolute"   ,      "dominance_relative",
+        "dominance_simpson"      ,    "dominance_core_abundance" ,  "dominance_gini"  ,           "rarity_log_modulo_skewness",
+        "rarity_low_abundance"   ,    "rarity_noncore_abundance",  "rarity_rare_abundance")
 
-result[[4]]
+# There are several methods available to calculate rarefaction curves, and here we will use the Richness method as an example
+
+method = "Richness"
+
+for (i in seq(100,max(phyloseq::sample_sums(ps)), by = 100) ) {
+  otb = as.data.frame(t(ggClusterNet::vegan_otu(ps)))
+  otb1 = vegan::rrarefy(t(otb), i)
+  psRe= phyloseq::phyloseq(phyloseq::otu_table(as.matrix(otb1),taxa_are_rows = F),phyloseq::sample_data(ps))
+  count = as.data.frame(t(ggClusterNet::vegan_otu(psRe)))
+  x = t(count)
+  est = vegan::estimateR(x)
+  index = est[1, ]
+  if (method %in% c("ACE")) {
+    ap_phy = phyloseq::estimate_richness(psRe, measures =method)
+    # head(ap_phy)
+    index = ap_phy$ACE
+  }
+
+  if (method %in% all) {
+    alp_mic = microbiome::alpha(psRe,index=method)
+    # head(alp_mic)
+    index = alp_mic[,1]
+  }
+  tab = data.frame(ID = names(phyloseq::sample_sums(psRe)))
+  tab = cbind(tab,i,index)
+  if (i == 100) {
+    result = tab
+  }
+  if (i != 100) {
+    result = rbind(result,tab)
+  }
+}
+
+for (ii in 1:length(phyloseq::sample_sums(ps))) {
+  result$i[result$i > phyloseq::sample_sums(ps)[ii][[1]]]
+  df_filter= filter(result, ID ==names(phyloseq::sample_sums(ps)[ii]) &i > phyloseq::sample_sums(ps)[ii][[1]])
+  result$index
+  result$index[result$i>phyloseq::sample_sums(ps)[ii][[1]]]
+  a = result$i>phyloseq::sample_sums(ps)[ii][[1]]
+  a[a == FALSE] = "a"
+  b = result$ID == names(phyloseq::sample_sums(ps)[ii])
+  b[b == FALSE] = "b"
+  result$index[a== b] = NA
+}
+map = as.data.frame(phyloseq::sample_data(ps))
+result$Group = map$Group
+main_theme =theme(panel.grid.major=element_blank(),
+                  panel.grid.minor=element_blank(),
+                  plot.title = element_text(vjust = -8.5,hjust = 0.1),
+                  axis.title.y =element_text(size = 7,face = "bold",colour = "black"),
+                  axis.title.x =element_text(size = 7,face = "bold",colour = "black"),
+                  axis.text = element_text(size = 7,face = "bold"),
+                  axis.text.x = element_text(colour = "black",size = 7),
+                  axis.text.y = element_text(colour = "black",size = 7),
+                  legend.text = element_text(size = 7,face = "bold"))
+head(result)
+result = result %>% dplyr::filter(index != "NA")
+result$ID = as.factor(result$ID)
+
+p = ggplot(data= result,aes(x = i,y = index,group = ID,color = Group)) +
+  geom_line() +
+  labs(x= "",y=method,title="") +theme_bw()+main_theme
+p
+
+data2 = data %>% head(nrow(data)/3)
+p1 = ggplot(data= result,aes(x = i,y = index,group = ID,color = Group)) +
+  geom_smooth(data = data2,
+              aes(x = i,y = index,group = ID,color = Group),
+              method='lm',formula = y~ x+I(x^2),se = F) +
+  labs(x= "",y=method,title="") +theme_bw()+main_theme
+p1
+data = result
+groups= dplyr::group_by(data, Group,i)
+data2 = dplyr::summarise(groups , mean(index), sd(index))
+# head(data2)
+colnames(data2) = c(colnames(data2)[1:2],"mean","sd")
+
+head(data2)
+p2 = ggplot(data= data2,aes(x = i,y = mean,colour = Group)) +
+  geom_line()+
+  geom_errorbar(aes(x = i,y = mean,ymin = mean - sd,ymax = mean + sd),width=0.1) +
+  labs(x= "",y=method,title="") +theme_bw()+main_theme
+p4 = ggplot(data=data2,aes(x = i,y = mean,colour = Group)) +
+  geom_smooth(data = data2[1:nrow(data2),],
+              method='lm',formula = y~ x+I(x^2),se = F) +
+  geom_errorbar(aes(x = i,y = mean,ymin = mean - sd,ymax = mean + sd),width=0.1) +
+  labs(x= "",y=method,title="") +theme_bw()+main_theme
+p4
 ```
 
-第三部分，使用ggplot2可视化排序分析结果
+# Part 3: Visualizing sorting analysis results using ggplot2
 
 ```{R}
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro/BetaDiv.R")
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro/MicroTest.R")
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro/pairMicroTest.R")
-result = BetaDiv(ps = ps, group = "Group", dist = "bray",
-                method = "PCoA", Micromet = "anosim", 
-                pvalue.cutoff = 0.05,
-                pair = T)
-result[[1]] 
+ps = readRDS("./data/ps_liu.rds")
+ps1_rela = phyloseq::transform_sample_counts(ps, function(x) x / sum(x) )
+# There are several methods available to calculate , and here we will use the PCoA as an example
+#   #-DCA
+#   ordi = phyloseq::ordinate(ps1_rela, method="DCA", distance="bray")
+#   points = ordi$rproj[,1:2]
+#   colnames(points) = c("x", "y")
+#   eig = ordi$evals^2
+#   #-CCA
+#   ordi = phyloseq::ordinate(ps1_rela, method="CCA", distance="bray")
+#   points = ordi$CA$v[,1:2]
+#   colnames(points) = c("x", "y")
+#   eig = ordi$CA$eig^2
+# #-RDA
+#   ordi = phyloseq::ordinate(ps1_rela, method="RDA", distance="bray")
+#   points = ordi$CA$v[,1:2]
+#   colnames(points) = c("x", "y")
+#   eig = ordi$CA$eig
+# #-MDS
+#   # ordi = ordinate(ps1_rela, method=ord_meths[i], distance=dist)
+#   ordi = phyloseq::ordinate(ps1_rela, method="MDS", distance="bray")
+#   points = ordi$vectors[,1:2]
+#   colnames(points) = c("x", "y")
+#   eig = ordi$values[,1]
+
+#-PCoA
+# method = "PCoA"
+unif = phyloseq::distance(ps1_rela , method="bray", type="samples")
+#这里请记住pcoa函数
+pcoa = stats::cmdscale(unif, k=2, eig=T)
+points = as.data.frame(pcoa$points)
+colnames(points) = c("x", "y")
+eig = pcoa$eig
+
+#-PCA
+# otu_table = as.data.frame(t(ggClusterNet::vegan_otu(ps1_rela )))
+#   otu.pca = stats::prcomp(t(otu_table), scale.default = TRUE)
+#   points = otu.pca$x[,1:2]
+#   colnames(points) = c("x", "y")
+#   eig=otu.pca$sdev
+#   eig=eig*eig
+
+
+#-LDA
+#   data = t(otu_table)
+#   data = as.data.frame(data)
+#   data = scale(data, center = TRUE, scale = TRUE)
+#   dim(data)
+#   data1 = data[,1:10]
+#   map = as.data.frame(sample_data(ps1_rela))
+#   model = MASS::lda(data, map$Group)
+#   ord_in = model
+#   axes = c(1:2)
+#   points = data.frame(predict(ord_in)$x[, axes])
+#   colnames(points) = c("x", "y")
+#   eig= ord_in$svd^2
+
+#-NMDS
+# ordi = phyloseq::ordinate(ps1_rela, method="NMDS", distance="bray")
+# points = ordi$points[,1:2]
+# colnames(points) = c("x", "y")
+# stress = ordi$stress
+# stress= paste("stress",":",round(stress,2),sep = "")
+
+g = sample_data(ps)$Group %>% unique() %>% length()
+n = sample_data(ps)$Group%>% length()
+o = n/g
+ps1_rela  = phyloseq::transform_sample_counts(ps, function(x) x / sum(x) );ps1_rela
+map = as.data.frame(phyloseq::sample_data(ps1_rela))
+unif = phyloseq::distance(ps, method="bray")
+# adonis
+ado =  vegan::adonis2(unif ~ map$Group,permutations = 999)
+# a = round(as.data.frame(ado$aov.tab[5])[1,1],3)
+R2 = paste("Adonis:R ",round(ado$R2[1],3), sep = "")
+# b = as.data.frame(ado$aov.tab[6])[1,1]
+p_v = paste("p: ",ado$`Pr(>F)`[1], sep = "")
+title1 = paste(R2," ",p_v, sep = "")
+title1
+map = as.data.frame(phyloseq::sample_data(ps1_rela))
+map$Group = as.factor(map$Group)
+colbar = length(levels(map$Group))
+
+points = cbind(points, map[match(rownames(points), rownames(map)), ])
+points$ID = row.names(points)
+
+p2 = ggplot(points, aes(x=x, y=y, fill = Group)) +
+  geom_point(alpha=.7, size=5, pch = 21) +
+  labs(x=paste0(method," 1 (",format(100*eig[1]/sum(eig),digits=4),"%)"),
+       y=paste0(method," 2 (",format(100*eig[2]/sum(eig),digits=4),"%)"),
+       title=title1) +
+  stat_ellipse(linetype=2,level=0.68,aes(group=Group, colour=Group))
+p3 = p2+ggrepel::geom_text_repel(aes(label=points$ID),size = 5)
+p3
+
 ```
 
-
-
-第四部分，使用ggplot2包绘制微生物群落分布物种堆叠柱状图
+# Part 4: Creating a stacked bar chart of microbial using ggplot2
 
 ```{R}
 library(tidyverse)
-# detach("package:Hmisc")
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro/barMainplot.R")
-result = barMainplot(ps = ps,
-                     j = "Phylum",
-                     label = FALSE,
-                     sd = FALSE,
-                     Top = 10)
-p4_1 <- result[[1]] + 
-  scale_fill_hue()
-p4_1
-p4_2  <- result[[3]] +
-  scale_fill_hue()
-p4_2
+ps = readRDS("./data/ps_liu.rds")
+j= "Genus"
+psdata <- ggClusterNet::tax_glom_wt(ps = ps,ranks = j)
+psdata = psdata%>% phyloseq::transform_sample_counts(function(x) {x/sum(x)} )
+otu = phyloseq::otu_table(psdata)
+tax = phyloseq::tax_table(psdata)
+
+for (i in 1:dim(tax)[1]) {
+  if (row.names(tax)[i] %in% names(sort(rowSums(otu), decreasing = TRUE)[1:10])) {
+    tax[i,j] =tax[i,j]
+  } else {
+    tax[i,j]= "others"
+  }
+}
+phyloseq::tax_table(psdata)= tax
+Taxonomies <- psdata %>%phyloseq::psmelt()
+Taxonomies$Abundance = Taxonomies$Abundance * 100
+colnames(Taxonomies) <- gsub(j,"aa",colnames(Taxonomies))
+data = c()
+i = 2
+for (i in 1:length(unique(phyloseq::sample_data(ps)$Group))) {
+  a <- as.data.frame(table(phyloseq::sample_data(ps)$Group))[i,1]
+  b =  as.data.frame(table(phyloseq::sample_data(ps)$Group))[i,2]
+  c <- Taxonomies %>%
+    dplyr::filter(Group == a)
+  c$Abundance <- c$Abundance/b
+  data = data.frame(Sample =c$Sample,Abundance = c$Abundance,aa =c$aa,Group = c$Group)
+  if (i == 1) {
+    table = data
+  }
+  if (i != 1) {
+    table = rbind(table,data)}}
+Taxonomies = table
+by_cyl <- dplyr::group_by(Taxonomies, aa,Group)
+zhnagxu2 = dplyr::summarise(by_cyl, sum(Abundance), sd(Abundance))
+iris_groups<- dplyr::group_by(Taxonomies, aa)
+cc<- dplyr::summarise(iris_groups, sum(Abundance))
+head(cc)
+colnames(cc)= c("aa","allsum")
+cc<- dplyr::arrange(cc, desc(allsum))
+head(zhnagxu2)
+colnames(zhnagxu2) <- c("aa","group","Abundance","sd")
+zhnagxu2$aa = factor(zhnagxu2$aa,order = TRUE,levels = cc$aa)
+zhnagxu3 = zhnagxu2
+Taxonomies_x = plyr::ddply(zhnagxu3,"group", summarize,label_sd = cumsum(Abundance),label_y = cumsum(Abundance) - 0.5*Abundance)
+head( Taxonomies_x )
+Taxonomies_x = cbind(as.data.frame(zhnagxu3),as.data.frame(Taxonomies_x)[,-1])
+Taxonomies_x$label = Taxonomies_x$aa
+Taxonomies_x$aa = factor(Taxonomies_x$aa,order = TRUE,levels = c(as.character(cc$aa)))
+
+p4 <- ggplot(Taxonomies_x , aes(x =  group, y = Abundance, fill = aa, order = aa)) +
+  geom_bar(stat = "identity",width = 0.5,color = "black") +
+  theme(axis.title.x = element_blank()) +
+  theme(legend.text=element_text(size=6)) +
+  scale_y_continuous(name = "Relative abundance (%)") +
+  guides(fill = guide_legend(title = j)) +
+  labs(x="",y="Relative abundance (%)",title= "")
+p4
+
 ```
 ####  Code 2B（Example 7）
-
-Example 7
-
-使用ggplot2扩展R包ggtern绘制三元图
+# Creating ternary plots using ggtern package
 
 ```{R}
-ps_rela = phyloseq::transform_sample_counts(ps,
-                                            function(x) x / sum(x) );ps_rela 
+ps = readRDS("./data/ps_liu.rds")
+ps_rela = phyloseq::transform_sample_counts(ps,function(x) x / sum(x) );ps_rela
 otu = ggClusterNet::vegan_otu(ps_rela) %>% as.data.frame()
-#数据分组
 iris.split <- split(otu,as.factor(as.factor(phyloseq::sample_data(ps)$Group)))
-#数据分组计算平均值
 iris.apply <- lapply(iris.split,function(x)colSums(x[]))
-# 组合结果
 iris.combine <- do.call(rbind,iris.apply)
 ven2 = t(iris.combine) %>% as.data.frame()
-
 head(ven2)
 A <- combn(colnames(ven2),3)
 ven2$mean = rowMeans(ven2)
@@ -312,26 +515,20 @@ p
 
 #### Code 2C（Example 8add）
 
-Example 8
-
 
 #### Code 2D（Example 8）
-
-
-使用ggplot2扩展R包ggtree绘制进化树
+# Using the R package ggtree to plot evolutionary trees
 
 ```{R}
+ps = readRDS("./data/ps_liu.rds")
 library(ggtreeExtra)
 library(ggtree)
-
-tax = ps %>% vegan_tax() %>%
-  as.data.frame()
+tax = ps %>% vegan_tax() %>% as.data.frame()
 head(tax)
 tax = remove_rankID(tax) %>%as.matrix()
 tax[is.na(tax)] = "Unknown"
 tax[tax == " "] = "Unknown"
 tax_table(ps) = as.matrix(tax)
-
 alltax = ps %>%
   ggClusterNet::filter_OTU_ps(150) %>%
   ggClusterNet::vegan_tax() %>%
@@ -346,149 +543,137 @@ p0
 ```
 
 #### Code 2E（Example 9）
-
-Example 9
-
-使用ggplot2扩展包绘制韦恩图
+# Using ggplot2 to  plot Venn diagrams
 
 ```{R}
-source("E:\\Shared_Folder\\Function_local\\R_function\\micro/Ven.Upset.gg.R")
-library(ggVennDiagram)
-res = Ven.Upset(ps =  ps,
-                group = "Group",
-                N = 0.5,
-                size = 3)
+ps = readRDS("./data/ps_liu.rds")
+aa =  ggClusterNet::vegan_otu(ps)
+otu_table = as.data.frame(t(aa))
+count = aa
+countA = count
+sub_design <- as.data.frame(phyloseq::sample_data(ps))
+count[count > 0] <- 1
+count2 = as.data.frame(count )
+aa = sub_design[,"Group"]
+colnames(aa) = "Vengroup"
+iris.split <- split(count2,as.factor(aa$Vengroup))
+iris.apply <- lapply(iris.split,function(x)colSums(x[]))
+iris.combine <- do.call(rbind,iris.apply)
+ven2 = t(iris.combine)
+for (i in 1:length(unique(phyloseq::sample_data(ps)[,"Group"]))) {
+  aa <- as.data.frame(table(phyloseq::sample_data(ps)[,"Group"]))[i,1]
+  bb =  as.data.frame(table(phyloseq::sample_data(ps)[,"Group"]))[i,2]
+  ven2[,aa] = ven2[,aa]/bb
+}
+ven2[ven2 < 0.5]  = 0
+ven2[ven2 >=0.5]  = 1
+ven2 = as.data.frame(ven2)
+ven3 = as.list(ven2)
+for (i in 1:ncol(ven2)) {
+  ven3[[i]] <-  row.names(ven2[ven2[i] == 1,])}
 
-p1 = res[[1]]
-p1
-p2 = res[[2]]
-p2
+T<- VennDiagram::venn.diagram(ven3,
+                              filename=NULL,
+                              lwd=2,
+                              lty=1,
+                              fill=c('red',"blue","yellow"),
+                              col=c('red',"blue","yellow"),
+                              cat.col=c('red',"blue","yellow"),
+                              cat.cex = 4,
+                              rotation.degree = 0,
+                              main = "",
+                              main.cex = 2,
+                              sub = "",
+                              sub.cex = 1,
+                              cex=3,
+                              alpha = 0.5,
+                              reverse=TRUE,
+                              scaled     = FALSE)
+grid::grid.draw(T)
 ```
 
 #### Code 2F（Example 10）
 
-Example 10
 
 ```{R}
 library(pheatmap)
-
 otu = ps %>% filter_OTU_ps(20) %>% vegan_otu() %>%
   as.data.frame()
-
 pheatmap(otu)
 pheatmap(otu, kmeans_k = 2)
 pheatmap(otu, scale = "row", clustering_distance_rows = "correlation")
 pheatmap(otu, color = colorRampPalette(c("navy", "white", "firebrick3"))(50))
 
-
 ```
 
 #### Code 2G（Example 11）
 
-Example 11
 
 ```{R}
-
-ps_rela = phyloseq::transform_sample_counts(ps, function(x) x / sum(x) );ps_rela 
+ps_rela = phyloseq::transform_sample_counts(ps, function(x) x / sum(x) );ps_rela
 ps_P <- ps_rela %>%
-  ggClusterNet::tax_glom_wt( rank = "Phylum") 
+  ggClusterNet::tax_glom_wt( rank = "Phylum")
 ps_P
 otu_P = as.data.frame((ggClusterNet::vegan_otu(ps_P)))
 head(otu_P)
 tax_P = as.data.frame(ggClusterNet::vegan_tax(ps_P))
-
 sub_design <- as.data.frame(phyloseq::sample_data(ps_P))
 count2 =   otu_P
-#数据分组
 iris.split <- split(count2,as.factor(sub_design$Group))
-#数据分组计算平均值
 iris.apply <- lapply(iris.split,function(x)colSums(x[]))
-# 组合结果
 iris.combine <- do.call(rbind,iris.apply)
 ven2 = t(iris.combine)
-# head(ven2)
 lev = "Phylum"
 
 Taxonomies <- ps %>%
-  ggClusterNet::tax_glom_wt(rank = "Phylum") %>% 
-  phyloseq::transform_sample_counts(function(x) {x/sum(x)} )%>% 
+  ggClusterNet::tax_glom_wt(rank = "Phylum") %>%
+  phyloseq::transform_sample_counts(function(x) {x/sum(x)} )%>%
   phyloseq::psmelt() %>%
-  #filter(Abundance > 0.05) %>%
   dplyr::arrange( Phylum)
 iris_groups<- dplyr::group_by(Taxonomies, Phylum)
 ps0_sum <- dplyr::summarise(iris_groups, mean(Abundance), sd(Abundance))
 ps0_sum[is.na(ps0_sum)] <- 0
 head(ps0_sum)
 colnames(ps0_sum) = c("ID","mean","sd")
-
-
 ps0_sum <- dplyr::arrange(ps0_sum,desc(mean))
 ps0_sum$mean <- ps0_sum$mean *100
 ps0_sum <- as.data.frame(ps0_sum)
 head(ps0_sum)
 top_P = ps0_sum$ID[1:10];top_P
-
-### 开始进一步合并过滤
 otu_P = as.data.frame(t(otu_P))
 otu_tax = merge(ven2,tax_P,by = "row.names",all = F)
 dim(otu_tax)
 otu_tax[,lev] = as.character(otu_tax[,lev])
 otu_tax[,lev][is.na(otu_tax[,lev])] = "others"
-
-i = 1
 for (i in 1:nrow(otu_tax)) {
   if(otu_tax[,lev] [i] %in% top_P){otu_tax[,lev] [i] = otu_tax[,lev] [i]}
-  
   else if(!otu_tax[,lev] [i] %in% top_P){otu_tax[,lev] [i] = "others"}
-  
 }
-
 otu_tax[,lev] = as.factor(otu_tax[,lev])
 head(otu_tax)
-
 otu_mean = otu_tax[as.character(unique(sub_design$Group))]
 head(otu_mean)
 row.names(otu_mean) = row.names(otu_tax)
 iris.split <- split(otu_mean,as.factor(otu_tax[,lev]))
-#数据分组计算平均值
 iris.apply <- lapply(iris.split,function(x)colSums(x[]))
-# 组合结果
 iris.combine <- do.call(rbind,iris.apply)
 mer_otu_mean = t(iris.combine)
-
 head(mer_otu_mean )
-
-
-# mer_otu_mean = t(mer_otu_mean)
-
-
-# library(statnet)
-# library(circlize)
-# library(RColorBrewer)#调色板调用包
 mi_sam = RColorBrewer::brewer.pal(9,"Set1")
 mi_tax = colorRampPalette(RColorBrewer::brewer.pal(9,"Set3"))(length(row.names(mer_otu_mean)))
-# library("scales")
-# show_col(mi_sam )
-# show_col(mi_tax)
-# circlize::CELL_META
-
 grid.col = NULL
-#这里设置样品颜色
 grid.col[as.character(unique(sub_design$Group))] = mi_sam
-#设置群落中物种水平颜色
-# grid.col[colnames(mer_otu_mean)] = mi_tax
+
 grid.col[row.names(mer_otu_mean)] = mi_tax
 
-
-#gap.degree修改间隔，不同小块之间的间隔
 circlize::circos.par(gap.degree = c(rep(2, nrow(mer_otu_mean)-1), 10, rep(2, ncol(mer_otu_mean)-1), 10),
                      start.degree = 180)
 circlize::chordDiagram(mer_otu_mean,
                        directional = F,
                        diffHeight = 0.06,
-                       grid.col = grid.col, 
+                       grid.col = grid.col,
                        reduce = 0,
-                       transparency = 0.5, 
+                       transparency = 0.5,
                        annotationTrack =c("grid", "axis"),
                        preAllocateTracks = 2
 )
@@ -497,48 +682,23 @@ circlize::circos.track(track.index = 1, panel.fun = function(x, y) {
   circlize::circos.text(circlize::CELL_META$xcenter, circlize::CELL_META$ylim[1], circlize::CELL_META$sector.index,
                         facing = "clockwise", niceFacing = TRUE, adj = c(0, 0.5))}, bg.border = NA)# here set bg.border to NA is important
 circlize::circos.clear()
-dev.off()
-# grid.col = NULL
-# #这里设置样品颜色
-# grid.col[as.character(unique(sub_design$Group))] = mi_sam
-# #设置群落中物种水平颜色
-# # grid.col[colnames(mer_otu_mean)] = mi_tax
-# grid.col[row.names(mer_otu_mean)] = mi_tax
-# 
-# #gap.degree修改间隔，不同小块之间的间隔
-# circlize::circos.par(gap.degree = c(rep(2, nrow(mer_otu_mean)-1), 10, rep(2, ncol(mer_otu_mean)-1), 10),
-#                      start.degree = 180)
-# circlize::chordDiagram(mer_otu_mean,directional = F,
-#                        reduce = 0,
-#                        diffHeight = 0.06,grid.col = grid.col, transparency = 0.5, annotationTrack =c("grid", "axis"),
-#                        preAllocateTracks = 2
-# )
-# 
-# circlize::circos.track(track.index = 1, panel.fun = function(x, y) {
-#   circlize::circos.text(circlize::CELL_META$xcenter, circlize::CELL_META$ylim[1], circlize::CELL_META$sector.index,
-#                         facing = "clockwise", niceFacing = TRUE, adj = c(0, 0.5))}, bg.border = NA) # here set bg.border to NA is important
-# circlize::circos.clear()
-# dev.off()
+
 ```
 
-
 #### Code 2H（Example 12）
-
-Example 12
-
-patchwork拼图
+# Using the R package patchwork for graphical combinations
 
 ```{R}
 library(ggplot2)
 library(patchwork)
-p1 <- ggplot(mtcars) + 
-  geom_point(aes(mpg, disp)) + 
+p1 <- ggplot(mtcars) +
+  geom_point(aes(mpg, disp)) +
   ggtitle('Plot 1')
-p2 <- ggplot(mtcars) + 
-  geom_boxplot(aes(gear, disp, group = gear)) + 
+p2 <- ggplot(mtcars) +
+  geom_boxplot(aes(gear, disp, group = gear)) +
   ggtitle('Plot 2')
-p3 <- ggplot(mtcars) + 
-  geom_point(aes(hp, wt, colour = mpg)) + 
+p3 <- ggplot(mtcars) +
+  geom_point(aes(hp, wt, colour = mpg)) +
   ggtitle('Plot 3')
 
 p1+p2+p3
