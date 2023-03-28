@@ -36,11 +36,9 @@ knitr::opts_chunk$set(
 ## 1 Introduction
 ## 2 Before microbiome data analysis
 ### Microbial community data preparation
+
 ### visualization in R language
 
-```{R}
-
-```
 
 #### Code 1A（Example 1）
 
@@ -98,7 +96,7 @@ apply(otu,2,sum)
 
 ```{R}
 library(plyr)
-?read.delim
+
 otu = read.delim("./data/otutab.txt",row.names = 1)
 tax = read.delim("./data/taxonomy.txt",row.names = 1)
 dat = cbind(otu,tax)

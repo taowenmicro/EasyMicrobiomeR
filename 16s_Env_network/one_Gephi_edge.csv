@@ -1,0 +1,5 @@
+"source","target","correlation","direct","cor"
+"env9","bac_ASV_104",0.708978328173375,"undirected","+"
+"bac_ASV_104","env9",0.708978328173375,"undirected","+"
+"env3","bac_ASV_12",-0.719298245614035,"undirected","-"
+"bac_ASV_12","env3",-0.719298245614035,"undirected","-"

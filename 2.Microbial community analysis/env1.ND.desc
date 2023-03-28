@@ -1,0 +1,5 @@
+new("big.matrix.descriptor", description = list(sharedType = "FileBacked", 
+    filename = "env1.ND.bin", dirname = "./2.Microbial community analysis//", 
+    totalRows = 2432L, totalCols = 2432L, rowOffset = c(0, 2432
+    ), colOffset = c(0, 2432), nrow = 2432, ncol = 2432, rowNames = NULL, 
+    colNames = NULL, type = "double", separated = FALSE))
