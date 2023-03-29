@@ -33,12 +33,12 @@ knitr::opts_chunk$set(
 
 
 
-## 构建phyloseq对象
-
+## make phyloseq object (构建phyloseq对象)
 
 
 ```{r}
-# 从文件读取
+# Reading the raw file（原始文件读取）
+
 metadata = read.delim("./data/data.ps/metadata.tsv")
 row.names(metadata) = metadata$SampleID
 otutab = read.table("./data/data.ps/otutab.txt", header=T, row.names=1, sep="\t", comment.char="", stringsAsFactors = F)
@@ -50,7 +50,8 @@ tree = read.tree("./data/data.ps/otus.tree")
 library(Biostrings)
 rep = readDNAStringSet("./data/data.ps/otus.fa")
 
-# 导入phyloseq(ps)对象
+# Import phyloseq package（导入phyloseq(ps)R包）
+
 library(phyloseq)
 
 ps = phyloseq(sample_data(metadata),
@@ -66,9 +67,9 @@ saveRDS(ps,"./data/data.ps/make.ps.rds")
 ```
 
 
-## 分析之前
+## Preparing data analysis (数据分析准备）
 
-导入数据，R包等
+Import data (ps object) and R packages（导入数据(ps对象)，R包）
 
 
 ```{r}
@@ -193,7 +194,7 @@ if (Tax4Fun) {
 
 ```
 
-### 数据处理基础信息表格输出
+### Output basic information table（基础信息表格输出）
 
 
 ```{r}
@@ -251,9 +252,9 @@ for (i in 2: length(phyloseq::rank_names(ps0))) {
 ```
 
 
-## 1.群落多样性分析
+## 1.Community diversity analysis（1.群落多样性分析）
 
-### alpha多样性
+### alpha diversity（alpha多样性）
 
 
 ```{r}
@@ -404,7 +405,7 @@ write.csv(dat,FileName,sep = "")
 ```
 
 
-### alpha稀释曲线绘制
+### alpha-rarefaction curve（alpha稀释曲线）
 
 
 ```{r}
@@ -571,7 +572,7 @@ write.csv(raretab,FileName,sep = "")
 ```
 
 
-### 排序分析beta-diversity
+### beta diversity（beta多样性）
 
 
 ```{r}
@@ -1016,7 +1017,7 @@ mytheme1 = theme_classic() + theme(
 
 ```
 
-### 物种分类树
+### Species Taxonomic Tree（物种分类树）
 
 
 ```{r}
@@ -1375,7 +1376,7 @@ ggsave(FileName, p7, width = 12, height = 12,dpi = 72)
 ```
 
 
-###  物种组成和弦图
+### Species composition-chord diagram（物种组成-和弦图）
 
 
 ```{r}
@@ -1516,7 +1517,7 @@ dev.off()
 ```
 
 
-### 物种组成展示-堆叠图
+### Species composition-stack bar diagram（物种组成-堆叠柱状图）
 
 
 ```{r}
@@ -1774,9 +1775,7 @@ detach("package:ggalluvial")
 ```
 
 
-###  环状物种堆叠柱状图+距离和丰度合并
-
-
+### Species composition-circle strack bar diagram（物种组成-环状堆叠柱状图）
 
 ```{r}
 ps = readRDS("./data/dataNEW/ps_16s.rds")
@@ -1884,8 +1883,6 @@ hcluter_method = "complete"
     ) +theme_void()
   
   
-
-
 
 FileName2 <- paste(barpath,"/a2_","_bar",".jpg", sep = "")
 ggsave(FileName2, p2, width = 10, height =8 )
@@ -2079,9 +2076,7 @@ ps = readRDS("./data/dataNEW/ps_16s.rds")
 ```
 
 
-### 三元图
-
-
+### Ternary diagram（三元图）
 
 ```{r}
 
@@ -2133,8 +2128,7 @@ detach("package:ggtern")
 
 ```
 
-### 共有微生物特有微生物-花瓣图
-
+### Total microbe + Specific microbe (共有微生物+特有微生物)
 
 ```{r}
 
@@ -2228,8 +2222,7 @@ ggsave(FileName2, p0_2, width = 14, height = 14 )
 ```
 
 
-### 维恩图
-
+### Venn diagram（维恩图）
 
 ```{r}
   Venpath = paste(otupath,"/Ven_Upset_super/",sep = "")
@@ -2403,8 +2396,7 @@ N = 0.5
 
 ```
 
-### 维恩网络图
-
+### Venn-network diagram（维恩网络图）
 
 ```{r}
 
@@ -2466,7 +2458,7 @@ detach("package:phyloseq")
 
 ```
 
-### 微生物桑基图
+### Sankey diagram（桑基图）
 
 
 ```{r}
@@ -2627,11 +2619,10 @@ webshot(paste(snapath,"/sankey_Group.html", sep = "") , paste(snapath,"/sankey_G
 ```
 
 
-## 2.差异分析
+## 2.Difference analysis (2.差异分析)
 
 
-### edgeR和DESep2-火山图
-
+### edgeR and DESep2-Volcano plot（edgeR和DESep2-火山图）
 
 ```{r}
 
@@ -3108,11 +3099,7 @@ write.csv(res,filename,quote = F)
 ```
 
 
-
-
-
-### edgeR--曼哈顿图
-
+### edgeR-Manhattan diagram（edgeR-曼哈顿图）
 
 ```{r}
 
@@ -3213,7 +3200,7 @@ count = ps %>%
 
 ```
 
-### STAMP_差异分析
+### STAMP_difference analysis（STAMP_差异分析）
 
 
 ```{r}
@@ -3390,7 +3377,7 @@ detach("package:patchwork")
 ```
 
 
-###  热图+气泡图
+### Heatmap + Bubble diagram （热图+气泡图）
 
 
 ```{r}
@@ -3583,7 +3570,7 @@ row_cluster=TRUE
 ```
 
 
-### 多组差异分析火山图
+### Multi-group difference analysis volcano plot（多组差异分析火山图）
 
 
 ```{r}
@@ -3729,10 +3716,10 @@ ggsave(filename,p,width = 12,height = 6,limitsize = FALSE)
 ```
 
 
-##  3.生物标志物鉴别
+## 3.Biomarker identification （3.生物标志物鉴别）
 
 
-### lefse分析
+### LEfSe analysis（LEfSe分析）
 
 
 ```{r}
@@ -4105,7 +4092,7 @@ for (j in 2:4) {
 
 ```
 
-### 机器学习
+### Machine learning（机器学习）
 
 
 ```{r}
@@ -4563,11 +4550,10 @@ write.csv(data,filename,quote = F)
 ```
 
 
-## 4.相关和网络分析
+## 4.Correlation network analysis（4.相关和网络分析）
 
 
-### 网络分析1
-
+### network analysis-1（网络分析1）
 
 ```{r}
 ps = readRDS("./data/dataNEW/ps_16s.rds")
@@ -4617,7 +4603,7 @@ ggsave(plotname1, p4_2,width = 10*gnum,height = 10,limitsize = FALSE)
 ```
 
 
-### 网络分析2
+### network analysis-2（网络分析2）
 
 
 ```{r}
@@ -4663,9 +4649,7 @@ ggsave(plotname1, p,width = 6*gnum,height = 6,limitsize = FALSE)
 ```
 
 
-### 网络稳定性分析
-
-
+### network stability analysis（网络稳定性分析）
 
 ```{r}
 library(ggClusterNet)
@@ -4844,7 +4828,8 @@ ggsave(paste(path,"/Natural_connectivity.pdf",sep = ""),  p,width = 5,height = 4
 ```
 
 
-### 网络模块化分析2-模块特征向量
+### network modularity analysis- Module eigenvectors（网络模块化分析-模块特征向量）
+
 ```{r}
 
 id = sample_data(ps)$Group %>% unique()
@@ -4904,13 +4889,10 @@ detach("package:igraph")
 
 
 
-### 分组之间距离比较和可视化
+### Comparison and visualization of distances between groups（分组之间距离比较和可视化）
 
 
 ```{r}
-
-
-  
   group = "Group"
   map = as.data.frame(sample_data(ps))
   alppath = paste(otupath,"/distance/",sep = "")
@@ -4997,9 +4979,9 @@ detach("package:igraph")
 
 
 
-## 5.功能预测
+## 5.Function Prediction（5.功能预测）
 
-### Tax4Fun2功能预测
+### Tax4Fun2-function prediction（Tax4Fun2-功能预测）
 
 
 ```{r}
@@ -5037,8 +5019,7 @@ detach("package:igraph")
 ```
 
 
-### Funguild功能预测
-
+### Funguild-function prediction（Funguild-功能预测）
 
 ```{r}
   library(EasyStat)
@@ -5132,14 +5113,12 @@ ps = readRDS("./data/dataNEW/ps_16s.rds")
 
 ```
 
-## 6.其他微生物组分析（环境因子等）
+## 6.Other microbiome analysis（6.其他微生物组分析（环境因子等））
 
 
-### 其他微生物分析（环境因子，系统发育等）
+### environmental factors and phylogenetic（环境因子和系统发育）
 
-
-导入数据
-
+Data Import（导入数据）
 
 ```{r}
 
@@ -5158,9 +5137,7 @@ res1path
 ```
 
 
-### 环境因子差异分析出图
-
-
+### environmental factors-difference analysis（环境因子-差异分析）
 
 ```{r}
 
@@ -5252,8 +5229,7 @@ ggsave(FileName, p1_3, width = ((1 + gnum) * 3), height = 4*gnum,limitsize = FAL
 
 
 
-###  环境因子相关分析
-
+### environmental factors-correlation analysis（环境因子相关分析）
 
 ```{r}
 library(igraph)
@@ -5319,9 +5295,7 @@ ggsave(FileName, p1, width = 10, height = 9,limitsize = FALSE)
 
 
 
-### 微生物和环境因子共排序RDA/CCA
-
-
+### Microbial and environmental factors - co-ordination_RDA/CCA（微生物和环境因子共排序RDA/CCA）
 
 ```{r}
 ps = readRDS("./data/dataNEW/ps_16s.rds")
@@ -5382,9 +5356,7 @@ write.csv(exp,filenamea)
 ```
 
 
-### 层次分割RDA/CCA
-
-
+### Hierarchical segmentation RDA/CCA（层次分割RDA/CCA）
 
 ```{r}
 library(rdacca.hp)
@@ -5406,7 +5378,7 @@ rdacca.hp.micro.p(
 
 ```
 
-### 基于dmm进行非限制性聚类分析-寻找响应群落的因子
+### non-restricted cluster analysis based on dmm - search for community response factors（基于dmm进行非限制性聚类分析-寻找群落响应的因子）
 
 
 ```{r}
@@ -5474,7 +5446,7 @@ fit<-lapply(1:num,dmn,count=count,verbose=TRUE)#lapply函数调用函数dmn，�
 ```
 
 
-### 微生物群落和环境Science组合图表
+### Microbial communities + Science article- Chart combination（微生物群落和环境Science组合图表）
 
 ```{r}
 
@@ -5559,8 +5531,7 @@ ggsave(FileName, p1,width = 15,height = 10)
 ```
 
 
-### 随机森林回归最重要的指标
-
+### The important indexes of random fores regression（随机森林回归最重要的指标）
 
 
 ```{r}
@@ -5774,7 +5745,7 @@ write.csv(dat,FileName)
 ```
 
 
-### 高丰度微生物和环境因子的关系探索
+### The relationships between environmental factors and high-abundance microorganisms（高丰度微生物和环境因子的关系探索）
 
 
 ```{r}
@@ -5987,8 +5958,7 @@ for (jj in 2:6) {
 ```
 
 
-### 变化福度大的微生物和环境因子的关系探索
-
+### Exploring the relationship between the large magnitude of change microorganisms  and environmental factors（变化幅度大的微生物和环境因子的关系探索）
 
 ```{r}
 
@@ -6077,7 +6047,7 @@ for (j in 2:6) {
 ```
 
 
-### 基于网络模块和环境因子的关系分析
+### Analysis of the relationship between network modules and environmental factors（基于网络模块和环境因子的关系分析）
 
 
 ```{r}
@@ -6309,8 +6279,7 @@ for (i in 1:length(id)) {
 ```
 
 
-### 细菌和环境因子的网络
-
+### Network analysis of bacterial and environmental factors（细菌和环境因子网络分析）
 
 
 ```{r}
@@ -6388,7 +6357,7 @@ write.csv(data,tablename)
 ```
 
 
-### 网络属性和模块与环境因子相关
+### Correlation analysis of network attributes and modules with environmental factors（网络属性-模块与环境因子相关分析）
 
 
 
@@ -6650,7 +6619,7 @@ net.property_env(
 
 
 
-### 细菌-真菌-环境因子三者共线网
+### Co-occurrence network of bacterial-fungal-environmental factors（细菌-真菌-环境因子三者共现网络）
 
 
 ```{r}
@@ -6728,7 +6697,7 @@ write.csv(data,tablename)
 ```
 
 
-### 细菌和真菌OTU网络-域网络-二分网络
+### Bacterial-fungal cross-domain networks(OTU network - domain network - bipartite network )（细菌和真菌跨域网络分析-OTU网络-域网络-二分网络）
 
 
 ```{r}
@@ -6820,7 +6789,7 @@ write.csv(result[[5]],tablename)
 ```
 
 
-### 细菌真菌任意水平二分网络
+### Bipartite network of bacteria and fungi at any taxonomic level（细菌真菌的任意水平二分网络）
 
 
 
@@ -6965,7 +6934,7 @@ write.csv(result[[5]],tablename)
 ```
 
 
-### 系统发育分析-准备数据
+### Phylogenetic analysis- data preparation.（系统发育分析-准备数据）
 
 ```{r}
 
@@ -7003,7 +6972,7 @@ n
 
 ```
 
-### 中性模型
+### Neutral model（中性模型）
 
 
 ```{r}
@@ -7345,7 +7314,7 @@ write.csv(data,FileName)
 
 ```
 
-### 计算零模型
+### Null model calculation （计算零模型）
 
 
 ```{r}
@@ -7527,7 +7496,7 @@ write.csv(ratiotab,FileName)
 
 ```
 
-### BNTI
+### βNTI-nearest taxon index（最近种间亲缘关系指数）
 
 ```{r}
 
@@ -7622,7 +7591,7 @@ write.csv(bNTI, filename)
 
 ```
 
-### 计算RCbray
+### RCbray calculation（计算RCbray）
 
 ```{r}
 
@@ -7755,7 +7724,7 @@ write.csv(RCbary,filename)
 ```
 
 
-### BNTI和RCbray联合出图
+### βNTI and RCbray combination analysis（βNTI和RCbray联合出图）
 
 
 ```{r}
@@ -7942,7 +7911,7 @@ write.csv(dat,FileName, quote = F)
 
 ```
 
-### 环境因子和BetaNTI相关
+### Environmental factors and βNTI correlation analysis（环境因子和βNTI相关分析）
 
 
 ```{r}
