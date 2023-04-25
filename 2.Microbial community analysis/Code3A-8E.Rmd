@@ -1,30 +1,26 @@
 ---
-  title: "Using R in microbial analysis"
-author: "Tao Wen(文涛)"
-date: "`r Sys.Date()`"
+title: "Using R in microbial analysis"
 output:
-  html_document:
+  pdf_document:
+  toc: yes
+word_document:
+  toc: yes
+toc_depth: '3'
+html_document:
   df_print: paged
 theme: cerulean
 highlight: haddock
 toc: yes
-toc_depth: 3
 toc_float:
   collapsed: no
 smooth_scroll: yes
 code_fold: show
-word_document:
-  toc: yes
-toc_depth: '3'
-pdf_document:
-  toc: yes
-toc_depth: '3'
 editor_options:
   chunk_output_type: console
 ---
 
 
-  ```{r setup, include = FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = T, echo=T, comment="#>", message=F, warning=F,
   fig.align="center", fig.width=7, fig.height=5, dpi=150)
@@ -38,6 +34,8 @@ knitr::opts_chunk$set(
 
 
 ```{R}
+# BiocManager::install("picante")
+
 library(phyloseq)
 library(Biostrings)
 library(ape)
@@ -120,6 +118,8 @@ DIST<- dist(t(otu),method = "euclidean")
 #### Code 3D（Example 15）
 
 ```{R}
+# BiocManager::install("factoextra")
+
 # HCLUST
 dist<- dist(t(otu),method = "euclidean" )
 otu.hclust <- hclust(dist, method = "complete")
@@ -253,6 +253,10 @@ head(tab.d11)
 
 
 ```{R}
+
+# BiocManager::install("edgeR")
+
+
 library(edgeR)
 phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
   require("edgeR")
@@ -313,6 +317,8 @@ head(tab.d4)
 
 
 ```{R}
+# BiocManager::install("DESeq2")
+
 library(DESeq2)
 ASV_table = ps %>%
   filter_taxa(function(x) sum(x ) > 0 , TRUE) %>%
@@ -327,7 +333,7 @@ dds <- DESeq2::DESeqDataSetFromMatrix(countData = ASV_table,
                                       colData=groupings,
                                       design = ~ Group)
 dds_res <- DESeq2::DESeq(dds, sfType = "poscounts")
-res <- DESeq2::results(dds_res, tidy=T, format="DataFrame")
+res <- DESeq2::results(dds_res, tidy=TRUE, format="DataFrame")
 rownames(res) <- res$row
 res <- res[,-1]
 head(res)
@@ -348,6 +354,8 @@ head(tab.d5)
 
 
 ```{R}
+# BiocManager::install("metagenomeSeq")
+
 library(metagenomeSeq)
 ASV_table = ps %>%
   filter_taxa(function(x) sum(x ) > 0 , TRUE) %>%
@@ -372,7 +380,7 @@ feature_data <- AnnotatedDataFrame(feature_data)
 rownames(feature_data) <- feature_data@data$ASV
 test_obj <- newMRexperiment(counts = data_list$counts, phenoData = pheno, featureData = feature_data)
 
-p <- cumNormStat(test_obj, pFlag = T)
+p <- cumNormStat(test_obj, pFlag = TRUE)
 
 
 test_obj_norm <- cumNorm(test_obj, p=p)
@@ -402,6 +410,7 @@ head(tab.d10)
 #### Code 4G（Example 22）
 
 ```{R}
+# BiocManager::install("ALDEx2")
 library(ALDEx2)
 ASV_table = ps %>%
   filter_taxa(function(x) sum(x ) > 0 , TRUE) %>%
@@ -417,7 +426,7 @@ results <- ALDEx2::aldex(reads=ASV_table, conditions = groupings$Group,
                          test="t",
                          effect=TRUE,
                          include.sample.summary = FALSE,
-                         verbose=T,
+                         verbose=TRUE,
                          denom="all")
 head(results)
 
@@ -440,7 +449,12 @@ head(tab.d1)
 
 
 ```{R}
+i= 1
 library(edgeR)
+library(tidyverse)
+library(ggClusterNet)
+library(phyloseq)
+
 ASV_table = ps %>%
   filter_taxa(function(x) sum(x ) > 0 , TRUE) %>%
   subset_samples(Group %in% id.g[,i]) %>%
@@ -501,35 +515,60 @@ head(tab.d7)
 #### Code 4I（Example 24）
 
 ```{R}
-library(ANCOMBC)
 # remotes::install_github("FrederickHuangLin/ANCOMBC")
+# BiocManager::install("ANCOMBC")
+# BiocManager::install("microbiome")
 
-main_var <- colnames(groupings)[1]
-p_adj_method = "BH"
-alpha=0.05
-adj_formula=NULL
-rand_formula=NULL
+library(ANCOMBC)
 
-res <-ANCOMBC::ANCOMBC(feature_table = feature_table,
-                       meta_data = metadata,
-                       struc_zero = struc_zero,
-                       main_var = main_var,
-                       p_adj_method = p_adj_method,
-                       alpha=alpha, adj_formula = adj_formula,
-                       rand_formula = rand_formula
-)
+data(atlas1006, package = "microbiome")
+tse = mia::makeTreeSummarizedExperimentFromPhyloseq(atlas1006)
 
-dat = res$out
-head(dat)
-dat$detected_0.6
-ANCOM.value = "detected_0.6"
-tab.d2 = dat %>% dplyr::select(taxa_id,detected_0.6) %>%
-  dplyr::filter(detected_0.6 == TRUE) %>%
-  dplyr::rename(
-    OTU = taxa_id,
-    p = detected_0.6
-  )  %>%
-  dplyr::mutate(group = "ANCOMII")
+# subset to baseline
+tse = tse[, tse$time == 0]
+
+# run ancombc function
+set.seed(123)
+out = ancombc(data = tse, assay_name = "counts",
+              tax_level = "Family", phyloseq = NULL,
+              formula = "age + nationality + bmi_group",
+              p_adj_method = "holm", prv_cut = 0.10, lib_cut = 1000,
+              group = "bmi_group", struc_zero = TRUE, neg_lb = FALSE,
+              tol = 1e-5, max_iter = 100, conserve = TRUE,
+              alpha = 0.05, global = TRUE, n_cl = 1, verbose = TRUE)
+
+res_prim = out$res
+res_global = out$res_global
+
+# 旧版本包使用指南
+# main_var <- colnames(groupings)[1]
+# p_adj_method = "BH"
+# alpha=0.05
+# adj_formula=NULL
+# rand_formula=NULL
+# 
+# ?ancombc
+# 
+# res <-ANCOMBC::ANCOMBC(feature_table = feature_table,
+#                        meta_data = metadata,
+#                        struc_zero = struc_zero,
+#                        main_var = main_var,
+#                        p_adj_method = p_adj_method,
+#                        alpha=alpha, adj_formula = adj_formula,
+#                        rand_formula = rand_formula
+# )
+# 
+# dat = res$out
+# head(dat)
+# dat$detected_0.6
+# ANCOM.value = "detected_0.6"
+# tab.d2 = dat %>% dplyr::select(taxa_id,detected_0.6) %>%
+#   dplyr::filter(detected_0.6 == TRUE) %>%
+#   dplyr::rename(
+#     OTU = taxa_id,
+#     p = detected_0.6
+#   )  %>%
+#   dplyr::mutate(group = "ANCOMII")
 
 ```
 
@@ -537,6 +576,9 @@ tab.d2 = dat %>% dplyr::select(taxa_id,detected_0.6) %>%
 #### Code 4J （Example 25）
 
 ```{R}
+# BiocManager::install("corncob")
+
+
 library(corncob)
 library(phyloseq)
 library(ggClusterNet)
@@ -580,6 +622,8 @@ head(tab.d3)
 #### Code 4K（Example 26）
 
 ```{R}
+# BiocManager::install("Maaslin2")
+
 ASV_table = ps %>%
   filter_taxa(function(x) sum(x ) > 0 , TRUE) %>%
   subset_samples(Group %in% id.g[,i]) %>%
@@ -620,7 +664,9 @@ head(tab.d9)
 
 
 ```{R}
-library(exactRankTests)
+# BiocManager::install("exactRankTests")
+
+
 library(exactRankTests)
 library(nlme)
 library(dplyr)
@@ -1267,6 +1313,9 @@ p2
 
 #### Code 5D（Example 31）
 ```{R}
+# BiocManager::install("ROCR")
+
+
 data(ps)
 ps.1 = subset_samples.wt(ps,"Group",c("WT"),T) %>%
   filter_OTU_ps(500)
@@ -1410,6 +1459,8 @@ p
 
 ####  Code 6A（Example 32）
 ```{R}
+# devtools::install_github("zdk123/SpiecEasi")
+
 library(psych)
 ps_sub = filter_OTU_ps(ps = ps,Top = 150)
 otu_table = as.data.frame(t(vegan_otu(ps_sub)))
@@ -1428,6 +1479,9 @@ occor.p
 
 ####  Code 6B（Example 33）
 ```{R}
+# BiocManager::install("WGCNA")
+
+
 x = ps %>%
   filter_OTU_ps(Top = 200) %>%
   # scale_micro(method = "TMM") %>%
@@ -1520,6 +1574,10 @@ diameter
 
 #### Code 6F（Example 37）
 ```{R}
+
+# BiocManager::install("ggraph")
+
+
 library(Hmisc)
 library(ggraph)
 df_corr <- rcorr(t(otu_table), type = 'spearman')
@@ -1557,6 +1615,9 @@ plot(igraph,main="Co-occurrence network",
 
 #### Code 6G（Example 38）
 ```{R}
+# BiocManager::install("tidyfst")
+
+
 result = corMicro (ps = ps,
                    N = 150,
                    method.scale = "TMM",
@@ -1651,6 +1712,8 @@ Example 41
 Tax4Fun2功能预测
 
 ```{R}
+# devtools::install_github("fjossandon/Tax4Fun2")
+
 funcpath = paste("./Tax4Fun2/",sep = "")
 dir.create(funcpath)
 
@@ -1659,22 +1722,22 @@ otudir = funcpath
 #加载
 library(Tax4Fun2)
 #物种注释
-#指定 OTU 代表序列、Tax4Fun2 库的位置、参考数据库版本、序列比对（blastn）线程数等
-runRefBlast(path_to_otus = './data/otus2.fa',
-            path_to_reference_data = path_to_reference_data,
-            path_to_temp_folder = otudir, database_mode = 'Ref100NR',
-            use_force = TRUE, num_threads = 4)
-
-
-#预测群落功能
-#指定 OTU 丰度表、Tax4Fun2 库的位置、参考数据库版本、上步的物种注释结果路径等
-makeFunctionalPrediction(path_to_otu_table = './data/otutab.txt',
-                         path_to_reference_data = path_to_reference_data,
-                         path_to_temp_folder = otudir,
-                         database_mode = 'Ref100NR',
-                         normalize_by_copy_number = TRUE,
-                         min_identity_to_reference = 0.97,
-                         normalize_pathways = FALSE)
+# #指定 OTU 代表序列、Tax4Fun2 库的位置、参考数据库版本、序列比对（blastn）线程数等
+# runRefBlast(path_to_otus = './data/otus2.fa',
+#             path_to_reference_data = path_to_reference_data,
+#             path_to_temp_folder = otudir, database_mode = 'Ref100NR',
+#             use_force = TRUE, num_threads = 4)
+# 
+# 
+# #预测群落功能
+# #指定 OTU 丰度表、Tax4Fun2 库的位置、参考数据库版本、上步的物种注释结果路径等
+# makeFunctionalPrediction(path_to_otu_table = './data/otutab.txt',
+#                          path_to_reference_data = path_to_reference_data,
+#                          path_to_temp_folder = otudir,
+#                          database_mode = 'Ref100NR',
+#                          normalize_by_copy_number = TRUE,
+#                          min_identity_to_reference = 0.97,
+#                          normalize_pathways = FALSE)
 ```
 
 
@@ -1683,6 +1746,11 @@ makeFunctionalPrediction(path_to_otu_table = './data/otutab.txt',
 #### Code 8A Example 42
 
 ```{R}
+# BiocManager::install("eulerr")
+# BiocManager::install("minpack.lm")
+
+
+
 library(picante)
 library(ape)
 library(vegan)
@@ -1874,7 +1942,7 @@ bNTI = Phylo_turnover(psrare, 10, 1)
 
 
 ```{R}
-
+phypath = "./"
 
 RCbary = function(otu = NULL,tax = NULL,map = NULL,tree = NULL ,ps = NULL,group  = "Group",num = 99,thread = 1){
   ps_sub <- ps
@@ -2114,6 +2182,7 @@ Calc_RCbray <- function(physeq, reps, nproc){
 # 运行RCbray的计算，这个运算再5个小时左右999重复
 RCb = Calc_RCbray(psrare, 10, 1)
 head(RCb)
+
 ```
 
 
@@ -2123,15 +2192,17 @@ head(RCb)
 iCAMP
 
 ```{R}
+# install.packages('NST')
+library(NST)
 library(iCAMP)
-# install.packages('iCAMP')
+
 
 com.file="./data/otutab.txt"
 tree.file="./data/otus.tree"
 treat.file="./data/metadata.tsv"
 env.file="./data/env.txt"
-save.wd="./2.Microbial community analysis/"
-if(!dir.exists(save.wd)){dir.create(save.wd)}
+save.wd="./2.Microbial community analysis/iCAMP/"
+if(!dir.exists(save.wd)){fs::dir_create(save.wd)}
 
 # nworker为线程数，memory.G为运行内存，根据分析数据量、计算资源和希望的运行时间自行设置。
 prefix="Test"
@@ -2167,7 +2238,7 @@ comm=spid.check$comm
 tree=spid.check$tree
 
 
-if(!file.exists("pd.desc")) {
+if(!file.exists("./2.Microbial community analysis/iCAMP/pd.desc")) {
   pd.big=iCAMP::pdist.big(tree = tree, wd=save.wd, nworker = nworker, memory.G = memory.G)
 }else{
   pd.big=list()
@@ -2178,8 +2249,11 @@ if(!file.exists("pd.desc")) {
 
 
 # 计算生态位差异
-niche.dif=iCAMP::dniche(env = env,comm = comm,method = "niche.value",
-                        nworker = nworker,out.dist=FALSE,bigmemo=TRUE,
+niche.dif=iCAMP::dniche(env = env,
+                        comm = comm,
+                        method = "niche.value",
+                        nworker = nworker,out.dist=FALSE,
+                        bigmemo=TRUE,
                         nd.wd=save.wd)
 
 # 评估within-bin系统发育信号
@@ -2359,7 +2433,7 @@ result = FEAST(ps = ps,
                group = "Group",
                sinkG = "WT",
                sourceG = c("OE","KO"),
-               path = "E:/Shared_Folder/Function_local/R_function/micro/" # 注意按照自己设定的路径进行修改
+               path = "./4.The best practice R pipeline/function/" # 注意按照自己设定的路径进行修改
 )
 # result
 p <- Plot_FEAST(data = result)

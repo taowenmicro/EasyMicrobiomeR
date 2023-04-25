@@ -36,6 +36,8 @@ knitr::opts_chunk$set(
 
 
 ```{R}
+# BiocManager::install("animalcules")
+
 library(animalcules)
 library(SummarizedExperiment)
 library(MultiAssayExperiment)

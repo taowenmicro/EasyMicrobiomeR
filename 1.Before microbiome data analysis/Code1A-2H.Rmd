@@ -1,11 +1,10 @@
 ---
-  title: "Using R in microbial analysis"
+title: "Using R in microbial analysis"
 author: "Tao Wen(文涛)"
 date: "`r Sys.Date()`"
 output:
   pdf_document:
   toc: yes
-toc_depth: '3'
 word_document:
   toc: yes
 toc_depth: '3'
@@ -14,7 +13,6 @@ html_document:
 theme: cerulean
 highlight: haddock
 toc: yes
-toc_depth: 3
 toc_float:
   collapsed: no
 smooth_scroll: yes
@@ -25,7 +23,7 @@ editor_options:
 
 
 
-  ```{r setup, include = FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = T, echo=T, comment="#>", message=F, warning=F,
   fig.align="center", fig.width=7, fig.height=5, dpi=150)
@@ -46,6 +44,14 @@ knitr::opts_chunk$set(
 getwd()
 
 ```{R}
+
+# install.packages("BiocManager")
+# library(BiocManager)
+# install("phyloseq")
+# install("ggtree")
+
+
+
 library(phyloseq)
 library(Biostrings)
 # ?read.delim
@@ -55,9 +61,7 @@ library(ape)
 # ?read.tree
 library(ggtree)
 # ?read.tree
-library(phyloseq)
-# ?read_tree
-library(Biostrings)
+# ?read_tre
 # ?readDNAStringSet
 
 otu = read.delim("./data/otutab.txt",row.names = 1)
@@ -123,8 +127,10 @@ head(dat)
 # Data processing with tidyverse
 
 ```{R}
+# install("tidyverse")
+
+
 library(tidyverse)
-library(dplyr)
 library(tidyr)
 library(tibble)
 otu = read.delim("./data/otutab.txt",row.names = 1)
@@ -144,7 +150,9 @@ data = map %>% as.tibble() %>%
 data
 
 #---Random Forest modeling
+# install("randomForest")
 library(randomForest)
+
 # get_importance <- function(x){
 #   rf <- randomForest(x[,3:ncol(x)], as.factor(x$Group), importance = T)
 #   imps <- as.data.frame(rf$importance)
@@ -170,8 +178,22 @@ library(randomForest)
 # Part 1: Visualizing alpha diversity using ggplot2 package
 
 ```{R}
+
+# install("devtools")
+# install.packages("ggalluvial")
+# .libPaths()
+# library("devtools")
+# devtools::install_github("taowenmicro/ggClusterNet")
+# devtools::install_github("taowenmicro/EasyStat")
+
+
+
 index = c("Shannon","Inv_Simpson","Pielou_evenness","Simpson_evenness" ,"Richness" ,"Chao1","ACE" )
+
 library(ggClusterNet)
+
+
+
 ps = readRDS("./data/ps_liu.rds")
 samplesize = min(phyloseq::sample_sums(ps))
 ps11  = phyloseq::rarefy_even_depth(ps,sample.size = samplesize)
@@ -296,9 +318,10 @@ p = ggplot(data= result,aes(x = i,y = index,group = ID,color = Group)) +
   labs(x= "",y=method,title="") +theme_bw()+main_theme
 p
 
-data2 = data %>% head(nrow(data)/3)
+# data2 = data %>% head(nrow(data)/3)
+
 p1 = ggplot(data= result,aes(x = i,y = index,group = ID,color = Group)) +
-  geom_smooth(data = data2,
+  geom_smooth(data = result,
               aes(x = i,y = index,group = ID,color = Group),
               method='lm',formula = y~ x+I(x^2),se = F) +
   labs(x= "",y=method,title="") +theme_bw()+main_theme
@@ -322,7 +345,9 @@ p4 = ggplot(data=data2,aes(x = i,y = mean,colour = Group)) +
 p4
 ```
 
+
 # Part 3: Visualizing sorting analysis results using ggplot2
+
 
 ```{R}
 ps = readRDS("./data/ps_liu.rds")
@@ -481,7 +506,7 @@ p4 <- ggplot(Taxonomies_x , aes(x =  group, y = Abundance, fill = aa, order = aa
   theme(legend.text=element_text(size=6)) +
   scale_y_continuous(name = "Relative abundance (%)") +
   guides(fill = guide_legend(title = j)) +
-  labs(x="",y="Relative abundance (%)",title= "")
+  labs(x="",y="Relative abundance (%)",title= "") + scale_fill_hue()
 p4
 
 ```
@@ -489,6 +514,7 @@ p4
 # Creating ternary plots using ggtern package
 
 ```{R}
+# BiocManager::install("ggtern")
 ps = readRDS("./data/ps_liu.rds")
 ps_rela = phyloseq::transform_sample_counts(ps,function(x) x / sum(x) );ps_rela
 otu = ggClusterNet::vegan_otu(ps_rela) %>% as.data.frame()
@@ -518,6 +544,9 @@ p
 # Using the R package ggtree to plot evolutionary trees
 
 ```{R}
+# BiocManager::install("ggtreeExtra")
+# BiocManager::install("MicrobiotaProcess")
+
 ps = readRDS("./data/ps_liu.rds")
 library(ggtreeExtra)
 library(ggtree)
@@ -544,6 +573,10 @@ p0
 # Using ggplot2 to  plot Venn diagrams
 
 ```{R}
+# BiocManager::install("VennDiagram")
+
+
+
 ps = readRDS("./data/ps_liu.rds")
 aa =  ggClusterNet::vegan_otu(ps)
 otu_table = as.data.frame(t(aa))
@@ -594,6 +627,8 @@ grid::grid.draw(T)
 
 
 ```{R}
+# BiocManager::install("pheatmap")
+
 library(pheatmap)
 otu = ps %>% filter_OTU_ps(20) %>% vegan_otu() %>%
   as.data.frame()
@@ -608,6 +643,9 @@ pheatmap(otu, color = colorRampPalette(c("navy", "white", "firebrick3"))(50))
 
 
 ```{R}
+# BiocManager::install("circlize")
+
+
 ps_rela = phyloseq::transform_sample_counts(ps, function(x) x / sum(x) );ps_rela
 ps_P <- ps_rela %>%
   ggClusterNet::tax_glom_wt( rank = "Phylum")

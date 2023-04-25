@@ -1,7 +1,7 @@
 # source tracker analyses
 #
 # The function named 'FEAST'
-# 
+#
 #
 # You can learn more about package at:
 #
@@ -15,7 +15,7 @@
 #' @param sinkG object of sink group
 #' @param sourceG object of source group
 #' @details
-#' By default, input phyloseq object include metadata and otutab 
+#' By default, input phyloseq object include metadata and otutab
 #' @return  a table
 #' @author Contact: Tao Wen \email{2018203048@@njau.edu.cn}, Yong-Xin Liu \email{yxliu@@genetics.ac.cn}
 #' @references
@@ -26,12 +26,12 @@
 #'
 #' @seealso beta_pcoa beta_cpcoa
 #' @examples
-#' 
+#'
 #' FEAST(otu = otu,map = map,group = "Group",sinkG = "WT",sourceG = c("KO","OE"))
 #' FEAST(ps =ps,group = "Group",sinkG = "WT",sourceG = c("KO","OE"))
 #'
 #' @export
-#' 
+#'
 
 # #清空内存
 # rm(list=ls())
@@ -58,9 +58,9 @@ FEAST = function(otu = otutab,map = metadata,ps = NULL,group = "Group",sinkG = "
   library("reshape2")
   # library(EasyMicrobiome)
   #
-  
+
   source(paste(path,"FEAST-master/FEAST_src/src.R",sep = "/"))
-  # # 
+  # #
   # if (is.null(ps) ) {
   #   head(otu)
   #   otu = as.matrix(otu)
@@ -68,12 +68,12 @@ FEAST = function(otu = otutab,map = metadata,ps = NULL,group = "Group",sinkG = "
   #   colnames(map) = gsub(group,"AA", colnames(map))
   #   map$Group = map$AA
   #   map$Group = as.factor(map$Group )
-  # 
-  #   ps <- phyloseq(otu_table(otu, taxa_are_rows=TRUE), 
-  #                  sample_data(map) 
+  #
+  #   ps <- phyloseq(otu_table(otu, taxa_are_rows=TRUE),
+  #                  sample_data(map)
   #   )
   # }
-  # 
+  #
   # if (!is.null(ps) ) {
   #   ps = ps
   #   map = as.data.frame(sample_data(ps))
@@ -82,7 +82,7 @@ FEAST = function(otu = otutab,map = metadata,ps = NULL,group = "Group",sinkG = "
   #   map$Group = as.factor(map$Group)
   #   sample_data(ps) = map
   # }
-  
+
   otu = NULL
   tax = NULL
   map = NULL
@@ -94,48 +94,48 @@ FEAST = function(otu = otutab,map = metadata,ps = NULL,group = "Group",sinkG = "
   #--提取otu表格#--------
   otus <-  as.data.frame(t(vegan_otu(ps)))
   otus <- t(as.matrix(otus))
-  
-  
+
+
   head(metadata)
   #--将分组文件置于首列
   metadata$id = row.names(metadata)
   metadata = as.tibble(metadata)
   metadata<- dplyr::arrange(metadata, Group)
-  
-  
+
+
   #----提取样本名称，后续添加标记#------
   envs <- metadata$id
-  
+
   #--目标ID提取#-----
   mu = metadata$id[metadata$Group==sinkG]
-  
-  
+
+
   # 设置FEAST运行参数#----
   EM_iterations = 1000 #default value
   different_sources_flag = 1
   Proportions_est <- list()
-  
+
   #-提取每个分组测定的重复数量#-------
   rep = length(metadata$Group)/length(unique(metadata$Group))
   rep
-  
+
   it = 1
   for(it in 1:rep){
-    
+
     # it = 6
     #提取sink和source对应样本的位置，列的位置，方便后续提取#----
     train.ix <- which(metadata$Group%in%sourceG&metadata$id %in% metadata$id[seq(1, length(metadata$Group), rep)+(it-1)])
     test.ix <- which(metadata$Group==sinkG & metadata$id == mu[it])
     #--统计source样本数量#----
     num_sources <- length(train.ix)
-    num_sources 
+    num_sources
     #-输入的是原始序列文件这里进行计算最小抽平数量#----------
     COVERAGE =  min(rowSums(otus[c(train.ix, test.ix),]))  #Can be adjusted by the user
-    
+
     #提取source和sink对应的otu表格并抽平
     sources <- as.matrix(vegan::rrarefy(otus[train.ix,], COVERAGE))
     sinks <- as.matrix(vegan::rrarefy(t(as.matrix(otus[test.ix,])), COVERAGE))
-    # sources = sources[1,1:10] 
+    # sources = sources[1,1:10]
 
     if (length(sourceG) == 1) {
       tem1 <- sources %>% as.data.frame()
@@ -143,17 +143,23 @@ FEAST = function(otu = otutab,map = metadata,ps = NULL,group = "Group",sinkG = "
       dim(sources)
       row.names(sources) = paste(sourceG,1:2,sep = "")
     }
-    
+
     #打印数量信息
     print(paste("Number of OTUs in the sink sample = ",length(which(sinks > 0))))
     print(paste("Seq depth in the sources and sink samples = ",COVERAGE))
     print(paste("The sink is:", envs[test.ix]))
     #FEAST 计算主函数#-------
-    FEAST_output<-FEAST(source=sources, sinks = sinks, env = envs[train.ix], em_itr = EM_iterations, COVERAGE = COVERAGE)
+
+    FEAST_output<-FEAST(source=sources,
+                        sinks = sinks,
+                        env = envs[train.ix],
+                        em_itr = EM_iterations,
+                        COVERAGE = COVERAGE)
+
     Proportions_est[[it]] <- FEAST_output$data_prop[,1]
     #整理结果#---
     names(Proportions_est[[it]]) <- c(as.character(envs[train.ix]), "unknown")
-    
+
     if(length(Proportions_est[[it]]) < num_sources +1){
       tmp = Proportions_est[[it]]
       Proportions_est[[it]][num_sources] = NA
@@ -181,7 +187,7 @@ FEAST = function(otu = otutab,map = metadata,ps = NULL,group = "Group",sinkG = "
 #' @description Input otutab, metadata or phyloseq object; ; output a table object.
 #' @param result output object of the FEAST
 #' @details
-#' By default, input phyloseq object include metadata and otutab 
+#' By default, input phyloseq object include metadata and otutab
 #' @return  plot
 #' @author Contact: Tao Wen \email{2018203048@@njau.edu.cn}, Yong-Xin Liu \email{yxliu@@genetics.ac.cn}
 #' @references
@@ -192,12 +198,12 @@ FEAST = function(otu = otutab,map = metadata,ps = NULL,group = "Group",sinkG = "
 #'
 #' @seealso beta_pcoa beta_cpcoa
 #' @examples
-#' 
+#'
 #'  Plot_FEAST(data = result)
-#' 
+#'
 #'
 #' @export
-#' 
+#'
 
 
 # -例子
@@ -219,8 +225,8 @@ Plot_FEAST = function(data = result){
   labs <- paste0(row.names(asx_norm)," (", round(asx_norm[,1]/sum(asx_norm[,1])*100,2), "%)")
   asx_norm$lab = labs
   asx_norm$ID = row.names( asx_norm)
- p <-  ggplot(asx_norm, aes( x = "",y = present, fill = labs)) + 
-    geom_bar(stat = "identity",width = 20,color = "black") +  
+ p <-  ggplot(asx_norm, aes( x = "",y = present, fill = labs)) +
+    geom_bar(stat = "identity",width = 20,color = "black") +
     coord_polar(theta = "y",direction=1) +
     theme_void()
  return(p)
@@ -232,29 +238,29 @@ Plot_FEAST = function(data = result){
 # MuiPlot_FEAST(data = result)
 
 # MuiPlot_FEAST = function(data = result){
-# 
+#
 #   par(mfrow=c(2,dim(result)[2]/2), mar=c(1,1,1,1))
 #   # layouts = as.character(unique(metadata$SampleType))
-# 
+#
 #   for (i in 1:length(colnames(result))) {
-# 
+#
 #     labs <- paste0(row.names(result)," \n(", round(result[,i]/sum(result[,i])*100,2), "%)")
-# 
+#
 #     pie(result[,i],labels=labs, init.angle=90,col =  brewer.pal(nrow(result), "Reds"),
 #         border="black",main =colnames(result)[i] )
 #   }
 # }
-# 
+#
 MuiPlot_FEAST = function(data = result){
-  
+
   par(mfrow=c(2,dim(result)[2]/2), mar=c(1,1,1,1))
   # layouts = as.character(unique(metadata$SampleType))
   i = 1
   plots = list()
   for (i in 1:length(colnames(result))) {
-    
+
     asx = data.frame(row.names = row.names(result),result[,i])
-    
+
     asx  = as.matrix(asx)
     asx_norm = t(t(asx)/colSums(asx)) #* 100 # normalization to total 100
     head(asx_norm)
@@ -263,11 +269,11 @@ MuiPlot_FEAST = function(data = result){
     labs <- paste0(row.names(asx_norm)," (", round(asx_norm[,1]/sum(asx_norm[,1])*100,2), "%)")
     asx_norm$lab = labs
     asx_norm$ID = row.names( asx_norm)
-    
-    
+
+
     x <- colnames(result)[i]
-    p <-  ggplot(asx_norm, aes( x = "",y = !!sym(x), fill = lab)) + 
-      geom_bar(stat = "identity",width = 20,color = "black") +  
+    p <-  ggplot(asx_norm, aes( x = "",y = !!sym(x), fill = lab)) +
+      geom_bar(stat = "identity",width = 20,color = "black") +
       coord_polar(theta = "y",direction=1) +
       labs(title = x) +
       theme_void() +

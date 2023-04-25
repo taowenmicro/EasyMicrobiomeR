@@ -39,10 +39,10 @@ MicrobiomeAnalystR安装需要依赖非常多的R包，这也是其功能强大�
 
 
 ```{R eval=FALSE, include=FALSE}
-
+# BiocManager::install("pacman")
 #pacman 管理R包，瑞国不存在可以直接安装
 library(pacman)
-
+.libPaths()
 pacman::p_load(phyloseq, metacoder, pryr, biomformat, RColorBrewer, ggplot2, gplots, Cairo, igraph,
                BiocParallel, randomForest, metagenomeSeq, MASS, DESeq2, vegan, RJSONIO, ggfortify, pheatmap, xtable, genefilter,
                data.table, reshape, stringr, ape, grid, gridExtra, splitstackshape, edgeR, globaltest, R.utils, viridis, ggrepel,
@@ -65,21 +65,21 @@ pacman::p_load(phyloseq, metacoder, pryr, biomformat, RColorBrewer, ggplot2, gpl
 ### 数据导入
 
 ```{R}
-
+getwd()
 library("MicrobiomeAnalystR")
 
-path = "./2_Microbiome data analysis integrated class R package/pipeline/03.MicrobiomeAnalystR/"
+path = "./Pipeline1-6/03.MicrobiomeAnalystR/"
 
 #-初始化项目
 mbSet<-Init.mbSetObj()
-mbSet<-SetModuleType(mbSet, "mdp")#--扩增子数据标记为："mdp"
+mbSet<-SetModuleType(mbSet,"mdp")#--扩增子数据标记为："mdp"
 
 
-mbSet<-ReadSampleTable(mbSet, "./2_Microbiome data analysis integrated class R package//data_MicrobiomeAnalystR/map.txt");
+mbSet<-ReadSampleTable(mbSet, "./data_MicrobiomeAnalystR/map.txt");
 
-mbSet<-Read16STaxaTable(mbSet, "../../data_MicrobiomeAnalystR/taxonomy.txt");
-mbSet<-Read16SAbundData(mbSet, "../../data_MicrobiomeAnalystR/otutab.txt","text","Others/Not_specific","T");
-mbSet <- ReadTreeFile(mbSet,"../../data_MicrobiomeAnalystR/otus.tree")
+mbSet<-Read16STaxaTable(mbSet, "./data_MicrobiomeAnalystR/taxonomy.txt");
+mbSet<-Read16SAbundData(mbSet, "./data_MicrobiomeAnalystR/otutab.txt","text","GreengenesID","F","false");
+mbSet <- ReadTreeFile(mbSet,"./data_MicrobiomeAnalystR/otus.tree",module.type = "tree")
 
 
 ```

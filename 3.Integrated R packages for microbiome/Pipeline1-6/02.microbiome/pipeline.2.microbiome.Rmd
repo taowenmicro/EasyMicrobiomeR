@@ -54,7 +54,7 @@ This vignette provides a brief overview with example data sets from published mi
 ### 导入数据
 
 ```{R}
-
+# BiocManager::install("gcookbook")
 
 library(microbiome)
 library(phyloseq)
@@ -157,8 +157,8 @@ p1 <- plot_landscape(microbiome::transform(pseq.core, "compositional"),
        labs(title = paste("PCoA / Compositional / unifrac")) + 
   theme_bw()
 print(p1)
-path = "./2_Microbiome data analysis integrated class R package/pipeline/02.microbiome/"
-ggsave(paste(path,"Fig1_PCoA.pdf",sep = ""),p1,width = 6,height = 5)
+# path = "./2_Microbiome data analysis integrated class R package/pipeline/02.microbiome/"
+# ggsave(paste(path,"Fig1_PCoA.pdf",sep = ""),p1,width = 6,height = 5)
 #---如何提取数据，手动作图
 
 set.seed(423542)
@@ -193,7 +193,7 @@ p2 <- ps1 %>%
   plot_composition(sample.sort = "Bacteroidetes", otu.sort = "abundance") 
 print(p2)
 
-ggsave(paste(path,"./Fig2_abundance_bar.pdf",sep = ""),p2,width = 10,height = 8)
+# ggsave(paste(path,"./Fig2_abundance_bar.pdf",sep = ""),p2,width = 10,height = 8)
 
 ```
 
@@ -232,7 +232,7 @@ p <- plot_core(pseq, plot.type = "heatmap", colours = gray,
        prevalences = prevalences, detections = detections) +
     labs(x = "Detection Threshold (Relative Abundance (%))")
 p
-ggsave(paste(path,"./Fig2_core_heat.pdf",sep = ""),p,width = 10,height = 6)
+# ggsave(paste(path,"./Fig2_core_heat.pdf",sep = ""),p,width = 10,height = 6)
 
 
 
@@ -245,7 +245,7 @@ p <- plot_core(pseq, plot.type = "heatmap",
          min.prevalence = .2, horizontal = TRUE) 
 print(p)
 
-ggsave(paste(path,"./Fig2_OTU_heat.pdf",sep = ""),p,width = 14,height = 10)
+# ggsave(paste(path,"./Fig2_OTU_heat.pdf",sep = ""),p,width = 14,height = 10)
 
 
 
@@ -285,11 +285,11 @@ mycols <- c(nonCRC="#d6e2e9", CRC="#cbf3f0", H="#fcf5c7")
 # ggsave(paste(path,"Fig2_OTU_heat.pdf",sep = ""),p,width = 14,height = 10)
 
 
-pdf(paste(path,"/Fig3_ven.pdf",sep = ""))
+# pdf(paste(path,"/Fig3_ven.pdf",sep = ""))
 plot(venn(list_core),
      fills = mycols)
 
-dev.off()
+# dev.off()
 
 ```
 
@@ -311,9 +311,9 @@ pseqz <- microbiome::transform(pseq2, "Z")
 dfm <- melt(abundances(pseqz))
 colnames(dfm) <- c("Taxa", "Sample", "value")
 # ggsave(paste(path,"Fig2_OTU_heat.pdf",sep = ""),p,width = 14,height = 10)
-pdf("./Fig4_heatmap.pdf",width = 15,height = 12)
+# pdf("./Fig4_heatmap.pdf",width = 15,height = 12)
 heat(dfm, "Taxa", "Sample", "value")
-dev.off()
+# dev.off()
 
 
 # Sort the matrix rows and cols directly
@@ -335,7 +335,7 @@ https://microbiome.github.io/tutorials/post_hoc.html
 p4 <- boxplot_abundance(ps, x = "Group", y = "ASV_1") + scale_y_log10()
 print(p4)
 # ggsave(paste(path,"Fig2_OTU_heat.pdf",sep = ""),p,width = 14,height = 10)
-ggsave(paste(path,"./Fig5_special_microbe.pdf",sep = ""),p4,width = 4,height = 4)
+# ggsave(paste(path,"./Fig5_special_microbe.pdf",sep = ""),p4,width = 4,height = 4)
 
 library(tidyr)
 

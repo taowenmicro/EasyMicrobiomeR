@@ -69,13 +69,13 @@ width = 89
 height = 59
 
 # 加载扩增子分析数据：元数据、OTU表、物种注释、进化树
-metadata = read.table("../../data_microeco/metadata.txt", header=T, row.names=NULL, sep="\t", comment.char="")
+metadata = read.table("./data_microeco/metadata.txt", header=T, row.names=NULL, sep="\t", comment.char="")
 rownames(metadata) = metadata$SampleID
-otutab = read.table("../../data_microeco/otutab.txt", header=T, row.names=1, sep="\t", comment.char="")
-taxonomy = read.table("../../data_microeco/taxonomy.txt", header=T, row.names=1, sep="\t", comment.char="")
+otutab = read.table("./data_microeco/otutab.txt", header=T, row.names=1, sep="\t", comment.char="")
+taxonomy = read.table("./data_microeco/taxonomy.txt", header=T, row.names=1, sep="\t", comment.char="")
 library(phyloseq)
-tree = read_tree("../../data_microeco/otus.tree")
-env = read.table("../../data_microeco/env.txt", header=T, row.names=1, sep="\t", comment.char="")
+tree = read_tree("./data_microeco/otus.tree")
+env = read.table("./data_microeco/env.txt", header=T, row.names=1, sep="\t", comment.char="")
 
 # 特征表(OTU/ASV table)
 otutab[1:5, 1:5]
@@ -173,18 +173,6 @@ dev.off()
 
 ## Beta多样性 
 
-### PCoA --无法运行
-
-```{r}
-
-# 计算beta多样性
-t1 = trans_beta$new(dataset = dataset, group = "Group", measure = "bray", ordination = "PCoA")
-# 可视化，按组着色、形状，添加椭圆
-(p = t1$plot_ordination(plot_color = "Group", plot_shape = "Group", plot_group_ellipse = T))
-ggsave(paste0("beta/", "PCoA","_","bray",".pdf"), p, width = width*2, height = height*2, units = "mm")
-
-
-```
 
 ### 距离箱线图
 
@@ -244,46 +232,48 @@ t1 = trans_abund$new(dataset = dataset, taxrank = "Phylum", ntaxa = 6, groupmean
 ggsave(paste0("tax/", "Phylum","_","pie",".pdf"), p, width = width*3, height = height*3, units = "mm")
 ```
 
-## 差异比较 
+## 差异比较 -出现问题
 
 目前有metastat, LEfSe和随机森林3种方法可选。
 
 ### metasata
 
 ```{r, fig.width=15, fig.height=15}
-# 在属水平使用metasata分析各组差异 
-t1 = trans_diff$new(dataset = dataset, method = "metastat", group = "Group", metastat_taxa_level = "Genus")
-# 可视化第一组，前10个属 
-(p = t1$plot_metastat(use_number = 1:10, qvalue = 0.05, choose_group = 1))
-dir.create("diff", recursive=T)
-ggsave(paste0("diff/", "Genus","_","metastat",".pdf"), p, width = width*4, height = height*4, units = "mm")
+# # 在属水平使用metasata分析各组差异 
+# t1 = trans_diff$new(dataset = dataset, 
+#                     method = "metastat", 
+#                     group = "Group", metastat_taxa_level = "Genus")
+# # 可视化第一组，前10个属 
+# (p = t1$plot_metastat(use_number = 1:10, qvalue = 0.05, choose_group = 1))
+# dir.create("diff", recursive=T)
+# ggsave(paste0("diff/", "Genus","_","metastat",".pdf"), p, width = width*4, height = height*4, units = "mm")
 ```
 
-### lefse
+### lefse-错误
 
 ```{r, fig.width=9, fig.height=5}
 # lefse分析各组差异 
-t1 = trans_diff$new(dataset = dataset, method = "lefse", group = "Group", alpha = 0.01, lefse_subgroup = NULL)
+t1 = trans_diff$new(dataset = dataset, method = "lefse", group = "Group", alpha = 0.01, lefse_subgroup = NULL,p_adjust_method = "none")
 # t1$res_lefse是LEfSe结果
 # t1$res_abund是丰度信息
-(p = t1$plot_lefse_bar(LDA_score = 4))
-ggsave(paste0("diff/", "lefse","_","Group",".pdf"), p, width = width*4, height = height*4, units = "mm")
-t1$res_lefse[1:5, ]
+# (p = t1$plot_lefse_bar(LDA_score =1))
+# ggsave(paste0("diff/", "lefse","_","Group",".pdf"), p, width = width*4, height = height*4, units = "mm")
+# t1$res_lefse[1:5, ]
 ```
 
 
 ```{r, fig.width=8, fig.height=5}
 # 显示前30差异，柱+标准差
 (p = t1$plot_diff_abund(use_number = 1:30))
-ggsave(paste0("diff/", "lefse","_","Group_errorbar",".pdf"), p, width = width*4, height = height*4, units = "mm")
+# ggsave(paste0("diff/", "lefse","_","Group_errorbar",".pdf"), p, width = width*4, height = height*4, units = "mm")
 ```
 
 ```{r, fig.width=12, fig.height=12}
 # 绘制物种树
-t1$plot_lefse_cladogram(use_taxa_num = 200, use_feature_num = 50, clade_label_level = 5)
+# t1$plot_lefse_cladogram(use_taxa_num = 200, use_feature_num = 50, clade_label_level = 5)
 ```
 
-### 机器学习
+### 机器学习-错误
 
 ```{r, fig.width=8, fig.height=5}
 # 随机森林：按分组找属水平标记
@@ -295,13 +285,13 @@ t2 = t1$plot_diff_abund(use_number = 1:20, only_abund_plot = F)
 ggsave(paste0("diff/", "rf","_","importance_abundance",".pdf"), p, width = width*4, height = height*4, units = "mm")
 ```
 
-## 环境因子
+## 环境因子-错误
 
 ```{r}
 # RDA分析增加环境因子
 t1 = trans_env$new(dataset = dataset, add_data = env[, 1:7])
 # 使用bray-curtis距离dbrda
-t1$cal_rda(use_dbrda = T, use_measure = "bray")
+t1$cal_rda(use_dbrda = TRUE, use_measure = "bray")
 # 调整箭头长度，控制数量
 t1$trans_rda(adjust_arrow_length = T, max_perc_env = 10)
 # 按组着色绘图
@@ -312,7 +302,7 @@ ggsave(paste0("env/", "RDA_env1-7",".pdf"), p, width = width*2, height = height*
 
 ```{r}
 # 使用属水平
-t1$cal_rda(use_dbrda = F, taxa_level = "Genus")
+t1$cal_rda(use_dbrda = FALSE, taxa_level = "Genus")
 # 控制属显示数量
 t1$trans_rda(show_taxa = 10, adjust_arrow_length = T, max_perc_env = 1500, max_perc_tax = 3000, min_perc_env = 200, min_perc_tax = 300)
 # t1$res_rda_trans is the transformed result for plotting

@@ -73,10 +73,12 @@ Import data (ps object) and R packages（导入数据(ps对象)，R包）
 
 
 ```{r}
+# BiocManager::install("ggthemes")
+
 library(tidyverse)
 library(phyloseq)
 #--输入和设定构建好的ps文件#-----
-ps = base::readRDS("./data/dataNEW/ps_16s.rds")
+ps0 = base::readRDS("./data/dataNEW/ps_16s.rds")
 
 #-扩增子分析需要导入的R包#-----------
 
@@ -152,7 +154,7 @@ gnum
 # 设定排序顺序
 axis_order =  phyloseq::sample_data(ps)$Group %>%unique();axis_order
 
-
+ps = ps0
 
 ps_biost = ggClusterNet::filter_OTU_ps(ps = ps,Top = 500)
 
@@ -161,9 +163,9 @@ ps_Rlefse = ggClusterNet::filter_OTU_ps(ps = ps,Top = 400)
 
 
 #-------功能预测#----
-if (is.null(ps0@refseq)) {
+if (is.null(ps@refseq)) {
   Tax4Fun = FALSE
-} else if(!is.null(ps0@refseq)){
+} else if(!is.null(ps@refseq)){
   Tax4Fun = TRUE
 }
 
@@ -416,7 +418,7 @@ rare <- mean(phyloseq::sample_sums(ps))/10
   method = "Richness"
   group = "Group"
   start = 100
-  step = 100
+  step = 3000
   
   # library(microbiome)
   phyRare = function(ps = ps,N = 3000){
@@ -1033,7 +1035,7 @@ library(ggnewscale)
 # library(phyloseq)
 # library(tidyverse)
 #--微生物组进化树功能
-
+Top_micro = 150
 remove_rankID = function(taxtab){
   taxtab$Kingdom = gsub("d__","",taxtab$Kingdom)
   taxtab$Kingdom = gsub("k__","",taxtab$Kingdom)
@@ -1329,7 +1331,7 @@ barpath = paste(otupath,"/phy_tree_micro/",sep = "");print(barpath)
 dir.create(barpath)
 
 # rank.names(ps)
-# Top_micro = 150
+
 
 p6 = p1_1
 p7 = p5_1
@@ -1530,7 +1532,7 @@ sd = FALSE
 Top = 10
 tran = TRUE
 
-axis_order = NA
+# axis_order = NA
 
 
   # psdata = ps %>%
@@ -1640,11 +1642,9 @@ axis_order = NA
          title= "")
   # paste("Top ",Top," ",j,sep = "")
   p4
-  if (is.na(axis_order)) {
-    p4 = p4
-  }else{
+
     p4 = p4 + scale_x_discrete(limits = axis_order)
-  }
+
   
   
   if (sd == TRUE) {
@@ -1704,15 +1704,11 @@ axis_order = NA
     guides(fill = guide_legend(title = j),color = FALSE) +
     scale_y_continuous(expand = c(0,0))
   
-  if (is.na(axis_order)) {
-    p1 = p1
-    p3 = p3
-    
-  }else{
+
     p1 = p1 + scale_x_discrete(limits = axis_order)
     p3 = p3 + scale_x_discrete(limits = axis_order)
     
-  }
+  
   # p3
   if (label == TRUE) {
     p1 = p1 +
@@ -1778,6 +1774,8 @@ detach("package:ggalluvial")
 ### Species composition-circle strack bar diagram（物种组成-环状堆叠柱状图）
 
 ```{r}
+# BiocManager::install("ggstance")
+
 ps = readRDS("./data/dataNEW/ps_16s.rds")
 
 library(ggtree)
@@ -2462,6 +2460,8 @@ detach("package:phyloseq")
 
 
 ```{r}
+# BiocManager::install("networkD3")
+# BiocManager::install("webshot")
 
 library(ggClusterNet)
 library(phyloseq)
@@ -2633,6 +2633,8 @@ dir.create(diffpath)
 
 diffpath.1 = paste(diffpath,"/DEsep2/",sep = "")
 dir.create(diffpath.1)
+
+diffpath.2 = diffpath.1
 # 准备脚本
 group  = "Group"
 pvalue = 0.05
@@ -3574,7 +3576,7 @@ row_cluster=TRUE
 
 
 ```{r}
-
+# BiocManager::install("MetBrewer")
 
 
 diffpath.1 = paste(otupath,"/Mui.Group.v/",sep = "")
@@ -5022,6 +5024,8 @@ detach("package:igraph")
 ### Funguild-function prediction（Funguild-功能预测）
 
 ```{r}
+
+# BiocManager::install("microeco")
   library(EasyStat)
   # 加载R包
   library(microeco)
@@ -5359,6 +5363,9 @@ write.csv(exp,filenamea)
 ### Hierarchical segmentation RDA/CCA（层次分割RDA/CCA）
 
 ```{r}
+
+# BiocManager::install("rdacca.hp")
+
 library(rdacca.hp)
 library(vegan)
 library(ggClusterNet)
@@ -5464,18 +5471,18 @@ tabOTU1 = list(bac = otu1
 
 p0 <- ggClusterNet:: MatCorPlot(env.dat = envRDA,
                  tabOTU = tabOTU1,
-                 diag = F,
+                 diag = FALSE,
                  range = 0.1,
                  numpoint = 21,
                  sig = TRUE,
                  siglabel = FALSE,
-                 shownum = F,
+                 shownum = FALSE,
                  curvature = 0.1,
                  numsymbol = NULL,
                  lacx = "left",
                  lacy = "bottom",
                  p.thur = 0.05,
-                 onlysig = T
+                 onlysig = TRUE
 )
 p0
 
@@ -5535,6 +5542,8 @@ ggsave(FileName, p1,width = 15,height = 10)
 
 
 ```{r}
+
+# BiocManager::install("rfPermute")
 #--随机森林回归最重要的指标#--------
 
 rampath = paste(res1path,"/Random_env/",sep = "")
@@ -5684,12 +5693,12 @@ random.cor = function(pssub = ps,seed = seed){
   
   
   frichness.rfP <- rfPermute::rfPermute(NMDS1$MDS1 ~., data=NMDS1, ntree = 500, na.action = na.omit, nrep = 100, num.cores = 1)
-  frimp.scaled1 <- rfPermute::rp.importance(frichness.rfP, scale = TRUE)%>% round(3)
+  frimp.scaled1 <- rfPermute::importance(frichness.rfP, scale = TRUE)%>% round(3)
   frimp.scaled1 <- frimp.scaled1[,1:2]
   colnames(frimp.scaled1) = c("PC1","PC1.p")
   NMDS1<- cbind(env,MDS1 = index$PC2)  
   frichness.rfP <- rfPermute::rfPermute(NMDS1$MDS1 ~., data=NMDS1, ntree = 500, na.action = na.omit, nrep = 100, num.cores = 1)
-  frimp.scaled2 <- rfPermute::rp.importance(frichness.rfP, scale = TRUE) %>% round(3)
+  frimp.scaled2 <- rfPermute::importance(frichness.rfP, scale = TRUE) %>% round(3)
   frimp.scaled2 <- frimp.scaled2[,1:2]
   colnames(frimp.scaled2 ) = c("PC2","PC2.p")
   frimp.scaled1[is.na(frimp.scaled1)] = 1
@@ -5921,9 +5930,9 @@ for (jj in 2:6) {
   result = cor_env_ggcorplot(
     env1 = envRDA,
     env2 = top10,
-    label =  T,
-    col_cluster = T,
-    row_cluster = T,
+    label =  TRUE,
+    col_cluster = TRUE,
+    row_cluster = TRUE,
     method = "spearman",
     r.threshold= 0,
     p.threshold= 0
@@ -6011,9 +6020,9 @@ for (j in 2:6) {
   result = cor_env_ggcorplot(
     env1 = envRDA,
     env2 = data,
-    label =  T,
-    col_cluster = T,
-    row_cluster = T,
+    label =  TRUE,
+    col_cluster = TRUE,
+    row_cluster = TRUE,
     method = "spearman",
     r.threshold= 0,
     p.threshold= 0
@@ -6126,7 +6135,7 @@ for (i in 1:length(id)) {
 
   frichness.rfP <- rfPermute::rfPermute(tem.r[[1]] ~., data=tem.r[,-1],
                                         ntree = 500, na.action = na.omit, nrep = 100, num.cores = 1)
-  frimp.scaled1 <- rfPermute::rp.importance(frichness.rfP, scale = TRUE)%>% round(3)
+  frimp.scaled1 <- rfPermute::importance(frichness.rfP, scale = TRUE)%>% round(3)
   frimp.scaled1 <- frimp.scaled1[,1:2]
   df<-cbind(as.data.frame(frimp.scaled1),rownames(frimp.scaled1))
   head(df)
@@ -6323,7 +6332,7 @@ result <- ggClusterNet::corBionetwork(ps = ps.merge,
                         N = 0,
                         r.threshold = 0.6, # 相关阈值
                         p.threshold = 0.05,
-                        big = T,
+                        big = TRUE,
                         group = "Group",
                         env = data1, # 环境指标表格
                         envGroup = Gru,# 环境因子分组文件表格
@@ -6333,7 +6342,7 @@ result <- ggClusterNet::corBionetwork(ps = ps.merge,
                         size = "igraph.degree", # 出图点大小用什么数据
                         scale = TRUE, # 是否要进行相对丰度标准化
                         bio = TRUE, # 是否做二分网络
-                        zipi = F, # 是否计算ZIPI
+                        zipi = FALSE, # 是否计算ZIPI
                         step = 100, # 随机网络抽样的次数
                         width = 18,
                         label = TRUE,
@@ -6452,7 +6461,7 @@ net.property_env = function(
       
       dat = (otu - colMeans(otu))/colSD(otu) 
       head(dat)
-      otu_table(ps.t) = otu_table(as.matrix(dat),taxa_are_rows = T)
+      otu_table(ps.t) = otu_table(as.matrix(dat),taxa_are_rows = TRUE)
       #--计算总丰度
       otu = ps.t %>%  vegan_otu() %>% t()
       
@@ -6663,7 +6672,7 @@ result <- ggClusterNet::corBionetwork(ps = ps.merge,
                                       N = 0,
                                       r.threshold = 0.6, # 相关阈值
                                       p.threshold = 0.05,
-                                      big = T,
+                                      big = TRUE,
                                       group = "Group",
                                       env = data1, # 环境指标表格
                                       envGroup = Gru,# 环境因子分组文件表格
@@ -6673,7 +6682,7 @@ result <- ggClusterNet::corBionetwork(ps = ps.merge,
                                       size = "igraph.degree", # 出图点大小用什么数据
                                       scale = TRUE, # 是否要进行相对丰度标准化
                                       bio = TRUE, # 是否做二分网络
-                                      zipi = F, # 是否计算ZIPI
+                                      zipi = FALSE, # 是否计算ZIPI
                                       step = 100, # 随机网络抽样的次数
                                       width = 18,
                                       label = TRUE,
@@ -7016,7 +7025,7 @@ neutralModel = function(otu = NULL,
     maps = as.data.frame(maps)
     row.names(maps) = maps$ID
     ps_sub = psrare
-    sample_data( ps_sub ) =maps ;ps_sub
+    sample_data(ps_sub) =maps ;ps_sub
 
     # 提取OTU表格
     OTU.table = t(otu_table(ps_sub))
@@ -7120,7 +7129,7 @@ neutralModel = function(otu = NULL,
 
 
 
-result = neutralModel(ps = psphy,group  = "Group",ncol = 3)
+result = neutralModel(ps = ps,group  = "Group",ncol = 3)
 #--合并图表
 p1 =  result[[1]]
 p1
@@ -7288,17 +7297,26 @@ phySigPlot = function(otu = NULL,
   return(list(p,eco.crlg,data2))
 }
 
-
+env = read.csv("./data/dataNEW/env.csv")
+head(env)
+envRDA = env
+head(env)
+row.names(envRDA) = env$ID
+envRDA$ID = NULL
+head(envRDA)
 
 #
 phypath2 = paste(phypath,"/phyloSignal/",sep = "")
 dir.create(phypath)
-phyloSignal(ps = psphy,
+
+
+phyloSignal(ps = ps %>% filter_OTU_ps(400),
             group  = "Group",
-            env = env[,1:2],
+            env = envRDA[,2:3],
             path = phypath2)
 
-result = phySigPlot(ps = ps,group  = "Group",env = env[,1:2],path = phypath2)
+
+result = phySigPlot(ps = ps,group  = "Group",env = envRDA[,2:3],path = phypath2)
 #
 #提取图片
 p2 = result[[1]] + mytheme1
@@ -7615,24 +7633,24 @@ RCbary = function(otu = NULL,tax = NULL,map = NULL,tree = NULL ,ps = NULL,group 
   RCbray_null_func <- function(i, freq.abd.df, alpha1, alpha2, N){
     # Get simulated communities and distance
     ## initally select OTUs weighted by their frequency. The number of OTUs selected should equal the richness of the samples.
-    simcom1 = data.frame(table(sample(freq.abd.df$OTU, size=alpha1, replace=F, prob=freq.abd.df$freq)), stringsAsFactors = F)
+    simcom1 = data.frame(table(sample(freq.abd.df$OTU, size=alpha1, replace=FALSE, prob=freq.abd.df$freq)), stringsAsFactors = F)
     colnames(simcom1) = c("OTU","simcom1")
     simcom1$OTU = as.character(simcom1$OTU)
     simcom1 = inner_join(simcom1, freq.abd.df, by="OTU")
-    simcom2 = data.frame(table(sample(freq.abd.df$OTU, size=alpha2, replace=F, prob=freq.abd.df$freq)), stringsAsFactors = F)
+    simcom2 = data.frame(table(sample(freq.abd.df$OTU, size=alpha2, replace=FALSE, prob=freq.abd.df$freq)), stringsAsFactors = F)
     colnames(simcom2) = c("OTU","simcom2")
     simcom2$OTU = as.character(simcom2$OTU)
     simcom2 = inner_join(simcom2, freq.abd.df, by="OTU")
 
     ## Now recruit OTUs based on their abundance in the metacommunity
-    simcom1.abd = data.frame(table(sample(simcom1$OTU, size=N-alpha1, replace=T, prob=simcom1$p)), stringsAsFactors = F)
+    simcom1.abd = data.frame(table(sample(simcom1$OTU, size=N-alpha1, replace=TRUE, prob=simcom1$p)), stringsAsFactors = F)
     colnames(simcom1.abd) = c("OTU","simcom1.abd")
     simcom1.abd$OTU = as.character(simcom1.abd$OTU)
     simcom1 = full_join(simcom1, simcom1.abd, by="OTU") %>%
       mutate(simcom1.abd = ifelse(is.na(simcom1.abd), 1, simcom1.abd)) %>%
       select(OTU, simcom1.abd)
 
-    simcom2.abd = data.frame(table(sample(simcom2$OTU, size=N-alpha2, replace=T, prob=simcom2$p)), stringsAsFactors = F)
+    simcom2.abd = data.frame(table(sample(simcom2$OTU, size=N-alpha2, replace=TRUE, prob=simcom2$p)), stringsAsFactors = F)
     colnames(simcom2.abd) = c("OTU","simcom2.abd")
     simcom2.abd$OTU = as.character(simcom2.abd$OTU)
     simcom2 = full_join(simcom2, simcom2.abd, by="OTU") %>%
@@ -7936,7 +7954,7 @@ EnvCorbNTI = function(otu = NULL,
       spread(Sample_2, delta)
     rownames(delta.mat) = delta.mat$Sample_1
     delta.mat$Sample_1 = NULL
-    delta.mat = delta.mat[names(sort(rowSums(!is.na(delta.mat)), decreasing = F)), names(sort(colSums(!is.na(delta.mat)), decreasing = T))]
+    delta.mat = delta.mat[names(sort(rowSums(!is.na(delta.mat)), decreasing = FALSE)), names(sort(colSums(!is.na(delta.mat)), decreasing = TRUE))]
     delta.mat = as.dist(delta.mat)
 
     bNTI.mat = df %>%
@@ -7944,7 +7962,7 @@ EnvCorbNTI = function(otu = NULL,
       spread(Sample_2, bNTI)
     rownames(bNTI.mat) = bNTI.mat$Sample_1
     bNTI.mat$Sample_1 = NULL
-    bNTI.mat = bNTI.mat[names(sort(rowSums(!is.na(bNTI.mat)), decreasing = F)), names(sort(colSums(!is.na(bNTI.mat)), decreasing = T))]
+    bNTI.mat = bNTI.mat[names(sort(rowSums(!is.na(bNTI.mat)), decreasing = FALSE)), names(sort(colSums(!is.na(bNTI.mat)), decreasing = TRUE))]
     bNTI.mat = as.dist(bNTI.mat)
     if (!(is.null(seed))){
       set.seed(seed)

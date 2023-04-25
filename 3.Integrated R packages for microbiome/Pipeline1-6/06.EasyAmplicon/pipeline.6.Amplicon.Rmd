@@ -71,13 +71,13 @@ width = 89
 height = 59
 
 # 加载扩增子分析数据：元数据、OTU表、物种注释、进化树
-metadata = read.table("../../data_microeco/metadata.txt", header=T, row.names=NULL, sep="\t", comment.char="")
+metadata = read.table("./data_microeco/metadata.txt", header=T, row.names=NULL, sep="\t", comment.char="")
 rownames(metadata) = metadata$SampleID
-otutab = read.table("../../data_microeco/otutab.txt", header=T, row.names=1, sep="\t", comment.char="")
-taxonomy = read.table("../../data_microeco/taxonomy.txt", header=T, row.names=1, sep="\t", comment.char="")
+otutab = read.table("./data_microeco/otutab.txt", header=T, row.names=1, sep="\t", comment.char="")
+taxonomy = read.table("./data_microeco/taxonomy.txt", header=T, row.names=1, sep="\t", comment.char="")
 library(phyloseq)
-tree = read_tree("../../data_microeco/otus.tree")
-env = read.table("../../data_microeco/env.txt", header=T, row.names=1, sep="\t", comment.char="")
+tree = read_tree("./data_microeco/otus.tree")
+env = read.table("./data_microeco/env.txt", header=T, row.names=1, sep="\t", comment.char="")
 
 # 特征表(OTU/ASV table)
 otutab[1:5, 1:5]
