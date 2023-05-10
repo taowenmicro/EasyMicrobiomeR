@@ -1,30 +1,42 @@
 ---
-title: "Using R in microbial analysis"
+title: "Using R in microbial analysis-2"
+author: "Tao Wen(文涛)"
+date: "`r Sys.Date()`"
 output:
+  html_document:
+    df_print: paged
+    theme: cerulean
+    highlight: haddock
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    code_fold: show
+  word_document:
+    toc: yes
+    toc_depth: '3'
   pdf_document:
-  toc: yes
-word_document:
-  toc: yes
-toc_depth: '3'
-html_document:
-  df_print: paged
-theme: cerulean
-highlight: haddock
-toc: yes
-toc_float:
-  collapsed: no
-smooth_scroll: yes
-code_fold: show
-editor_options:
-  chunk_output_type: console
+    toc: yes
+    toc_depth: '3'
 ---
 
-
 ```{r setup, include = FALSE}
+path <- '../'
 knitr::opts_chunk$set(
-  collapse = T, echo=T, comment="#>", message=F, warning=F,
-  fig.align="center", fig.width=7, fig.height=5, dpi=150)
+  collapse = T, 
+  echo=T,
+  comment="#>", 
+  message=F,
+  warning=F,
+	fig.align="center",
+  fig.width=7,
+  fig.height=5,
+  dpi=150)
+knitr::opts_knit$set(root.dir = path)
 ```
+
+
 
 
 ## 3 microbial community analysis
@@ -60,7 +72,6 @@ Chao1
 ACE  <- estimateR(otu.alp)[4, ]
 ACE
 # Shannon
-?diversity
 Shannon <- vegan::diversity(otu.alp, index = 'shannon', base = exp(1))
 Shannon <- vegan::diversity(otu.alp, index = 'shannon', base = 2)
 Shannon
@@ -135,6 +146,8 @@ set.seed(1)
 gap = clusGap(scale(t(otu)),FUN = kmeans,nstart = 25,K.max = 10,B = 50)
 fviz_gap_stat(gap)
 KM<- kmeans(scale(t(otu)),centers =3 , nstart = 25)
+
+
 ```
 
 
@@ -179,18 +192,21 @@ vegan::mantel(dist1,dist2,method = "spearman")
 ```
 
 #### Code 4B（Example 17）
-
 ```{R}
 library(ggClusterNet)
 library(phyloseq)
+library(tidyverse)
+data(ps)
+
 #---wilcox.test
 map= sample_data(ps)
-head(map)
+i = 1
 id.g = map$Group %>% unique() %>% as.character() %>% combn(2)
 ASV_table = ps %>%
   scale_micro(method = "sampling") %>%
-  subset_samples(Group %in% id.g[,i]) %>%
-  vegan_otu() %>% t() %>%
+  subset_samples.wt("Group", id.g[,i]) %>%
+  vegan_otu() %>% 
+  t() %>%
   as.data.frame()
 groupings <- ps %>%
   subset_samples(Group %in% id.g[,i]) %>%
@@ -216,20 +232,22 @@ head(tab.d12)
 
 
 
+
 ####  Code 4C（Example 18）
 
 
 ```{R}
 map= sample_data(ps)
-head(map)
+# head(map)
 id.g = map$Group %>% unique() %>% as.character() %>% combn(2)
 ASV_table = ps %>%
   scale_micro(method = "sampling") %>%
-  subset_samples(Group %in% id.g[,i]) %>%
-  vegan_otu() %>% t() %>%
+  subset_samples.wt("Group", id.g[,i]) %>%
+  vegan_otu() %>% 
+  t() %>%
   as.data.frame()
 groupings <- ps %>%
-  subset_samples(Group %in% id.g[,i]) %>%
+  subset_samples.wt("Group", id.g[,i]) %>%
   sample_data()
 groupings$ID = row.names(groupings)
 pvals <- apply(ASV_table, 1, function(x) t.test(x ~ groupings$Group, exact=F)$p.value)
@@ -583,7 +601,7 @@ library(corncob)
 library(phyloseq)
 library(ggClusterNet)
 map= sample_data(ps)
-head(map)
+# head(map)
 id.g = map$Group %>% unique() %>% as.character() %>% combn(2)
 i = 1
 phylo <- ps %>%
@@ -641,9 +659,9 @@ ASV_table <- data.frame(t(ASV_table), check.rows = F, check.names = F, stringsAs
 row.names(groupings) = groupings$ID
 
 fit_data <- Maaslin2(
-  ASV_table, groupings,"Maaslin2", transform = "AST",
+  ASV_table, groupings,output = "./2.Microbial community analysis/Maaslin2", transform = "AST",
   fixed_effects = "Group",
-  standardize = FALSE, plot_heatmap = F, plot_scatter = F)
+  standardize = FALSE, plot_heatmap = FALSE, plot_scatter = FALSE)
 
 dat = fit_data$results
 head(dat)
@@ -745,14 +763,14 @@ feature_table_pre_process = function(feature_table, meta_data, sample_var, group
   }
 
   # 2. Discard taxa with zeros  >=  zero_cut
-  zero_prop = apply(feature_table, 1, function(x) sum(x == 0, na.rm = T)/length(x[!is.na(x)]))
+  zero_prop = apply(feature_table, 1, function(x) sum(x == 0, na.rm = TRUE)/length(x[!is.na(x)]))
   taxa_del = which(zero_prop >= zero_cut)
   if(length(taxa_del) > 0){
     feature_table = feature_table[- taxa_del, ]
   }
 
   # 3. Discard samples with library size < lib_cut
-  lib_size = colSums(feature_table, na.rm = T)
+  lib_size = colSums(feature_table, na.rm = TRUE)
   if(any(lib_size < lib_cut)){
     subj_del = which(lib_size < lib_cut)
     feature_table = feature_table[, - subj_del]
@@ -968,8 +986,11 @@ groupings <- ps %>%
   sample_data()
 groupings$ID = row.names(groupings)
 groupings$Sample <- rownames(groupings)
-prepro <- feature_table_pre_process(feature_table = ASV_table, meta_data = groupings, sample_var = 'Sample',
-                                    group_var = NULL, out_cut = 0.05, zero_cut = 0.90,
+prepro <- feature_table_pre_process(feature_table = ASV_table, 
+                                    meta_data = groupings, sample_var = 'Sample',
+                                    group_var = NULL,
+                                    out_cut = 0.05, 
+                                    zero_cut = 0.90,
                                     lib_cut = 1000, neg_lb=FALSE)
 
 feature_table <- prepro$feature_table
@@ -1317,7 +1338,7 @@ p2
 
 
 data(ps)
-ps.1 = subset_samples.wt(ps,"Group",c("WT"),T) %>%
+ps.1 = subset_samples.wt(ps,"Group",c("WT"),TRUE) %>%
   filter_OTU_ps(500)
 library(randomForest)
 library(caret)
@@ -1473,7 +1494,7 @@ occor.p = occor$p
 result <- sparcc.micro(data = t(otu_table),R = 10,ncpus = 1)
 occor.r = result[[1]]
 occor.p = result[[2]]
-occor.p
+# occor.p
 ```
 
 
@@ -1679,7 +1700,7 @@ p1
 
 #### Code 7A （Example 39）
 
-Tax4Fun
+Tax4Fun工具目前被Tax4Fun2所替带，这里示例内容省略，推荐使用编号4的代码运行Tax4Fun2内容。
 
 ```{R}
 
@@ -1712,23 +1733,23 @@ Example 41
 Tax4Fun2功能预测
 
 ```{R}
-# devtools::install_github("fjossandon/Tax4Fun2")
-
-funcpath = paste("./Tax4Fun2/",sep = "")
-dir.create(funcpath)
-
-path_to_reference_data = "C:/public/Tax4Fun2/Tax4Fun2_ReferenceData_v2"
-otudir = funcpath
-#加载
-library(Tax4Fun2)
-#物种注释
-# #指定 OTU 代表序列、Tax4Fun2 库的位置、参考数据库版本、序列比对（blastn）线程数等
-# runRefBlast(path_to_otus = './data/otus2.fa',
+# # devtools::install_github("fjossandon/Tax4Fun2")
+# source("./4.The best practice R pipeline/function/runRefBlast2.R")
+# funcpath = paste("./Tax4Fun2/",sep = "")
+# dir.create(funcpath)
+# 
+# path_to_reference_data = "./4.The best practice R pipeline/Tax4Fun2/Tax4Fun2_ReferenceData_v2"
+# otudir = funcpath
+# #加载
+# library(Tax4Fun2)
+# #物种注释
+# # #指定 OTU 代表序列、Tax4Fun2 库的位置、参考数据库版本、序列比对（blastn）线程数等
+# runRefBlast2(path_to_otus = './data/otus2.fa',
 #             path_to_reference_data = path_to_reference_data,
 #             path_to_temp_folder = otudir, database_mode = 'Ref100NR',
 #             use_force = TRUE, num_threads = 4)
-# 
-# 
+
+
 # #预测群落功能
 # #指定 OTU 丰度表、Tax4Fun2 库的位置、参考数据库版本、上步的物种注释结果路径等
 # makeFunctionalPrediction(path_to_otu_table = './data/otutab.txt',
@@ -1942,7 +1963,7 @@ bNTI = Phylo_turnover(psrare, 10, 1)
 
 
 ```{R}
-phypath = "./"
+phypath = "./2.Microbial community analysis/"
 
 RCbary = function(otu = NULL,tax = NULL,map = NULL,tree = NULL ,ps = NULL,group  = "Group",num = 99,thread = 1){
   ps_sub <- ps
@@ -2191,10 +2212,11 @@ head(RCb)
 
 iCAMP
 
-```{R}
+```{R eval=FALSE, include=FALSE}
 # install.packages('NST')
 library(NST)
 library(iCAMP)
+
 
 
 com.file="./data/otutab.txt"
@@ -2247,6 +2269,14 @@ if(!file.exists("./2.Microbial community analysis/iCAMP/pd.desc")) {
   pd.big$pd.file="pd.desc"
   pd.big$pd.name.file="pd.taxon.name.csv"}
 
+# today <- Sys.Date()
+# mydate <- strftime(today,format='%Y-%m-%d')
+
+# BiocManager::install("random")
+library("random")
+tem0 = as.vector(randomStrings(n = 1, len = 5))
+tem = paste0("./2.Microbial community analysis/",tem0)
+
 
 # 计算生态位差异
 niche.dif=iCAMP::dniche(env = env,
@@ -2254,7 +2284,7 @@ niche.dif=iCAMP::dniche(env = env,
                         method = "niche.value",
                         nworker = nworker,out.dist=FALSE,
                         bigmemo=TRUE,
-                        nd.wd=save.wd)
+                        nd.wd= tem)
 
 # 评估within-bin系统发育信号
 ds = 0.2
@@ -2277,16 +2307,16 @@ binps=iCAMP::ps.bin(sp.bin = sp.bin,sp.ra = sp.ra,spname.use = spname.use,
                     cor.method = "pearson",r.cut = 0.1, p.cut = 0.05, min.spn = 5)
 
 
-if(file.exists(paste0(prefix,".PhyloSignalSummary.csv"))){
+if(file.exists(paste0("./2.Microbial community analysis/iCAMP/",prefix,".PhyloSignalSummary.csv"))){
   appendy=TRUE;col.namesy=FALSE
 }else{
     appendy=FALSE;col.namesy=TRUE}
 
 
-write.table(data.frame(ds=ds,n.min=bin.size.limit,binps$Index),file = paste0(prefix,".PhyloSignalSummary.csv"),
+write.table(data.frame(ds=ds,n.min=bin.size.limit,binps$Index),file = paste0("./2.Microbial community analysis/iCAMP/",prefix,".PhyloSignalSummary.csv"),
             append = appendy, quote=FALSE, sep=",", row.names = FALSE,col.names = col.namesy)
 
-if(file.exists(paste0(prefix,".PhyloSignalDetail.csv"))){appendy2=TRUE;col.namesy2=FALSE
+if(file.exists(paste0("./2.Microbial community analysis/iCAMP/",prefix,".PhyloSignalDetail.csv"))){appendy2=TRUE;col.namesy2=FALSE
             }else{
               appendy2=FALSE;col.namesy2=TRUE}
 
@@ -2311,7 +2341,7 @@ icres=iCAMP::icamp.big(comm=comm, pd.desc = pd.big$pd.file, pd.spname=pd.big$tip
                        ses.cut = 1.96, rc.cut = 0.95, conf.cut=0.975, omit.option = "no",meta.ab = NULL)
 
 map = sample_data(ps)
-head(map)
+# head(map)
 
 treat.use = data.frame( as.numeric(map$Group)) %>%as.matrix()
 row.names(treat.use) = row.names(map)
@@ -2324,13 +2354,13 @@ pnstout=NST::pNST(comm=comm, pd.desc=pd.big$pd.file, pd.wd=pd.big$pd.wd,
                   nworker=nworker,
                   output.rand = TRUE, SES=FALSE, RC=FALSE)
 
-write.csv(pnstout$index.grp,file = paste0(prefix,".pNST.summary.",colnames(treat)[i],".csv"))
-write.csv(pnstout$index.pair.grp,file = paste0(prefix,".pNST.pairwise.",colnames(treat)[i],".csv"))
+write.csv(pnstout$index.grp,file = paste0("./2.Microbial community analysis/iCAMP/",prefix,".pNST.summary.",colnames(treat)[i],".csv"))
+write.csv(pnstout$index.pair.grp,file = paste0("./2.Microbial community analysis/iCAMP/",prefix,".pNST.pairwise.",colnames(treat)[i],".csv"))
 
 pnst.bt=NST::nst.boot(nst.result=pnstout, group=treat.use,
                       rand=rand.time, nworker=nworker)
-write.csv(pnst.bt$NST.summary,file = paste0(prefix,".pNST.bootstr.",colnames(treat)[i],".csv"))
-write.csv(pnst.bt$NST.compare,file = paste0(prefix,".pNST.compare.",colnames(treat)[i],".csv"))
+write.csv(pnst.bt$NST.summary,file = paste0("./2.Microbial community analysis/iCAMP/",prefix,".pNST.bootstr.",colnames(treat)[i],".csv"))
+write.csv(pnst.bt$NST.compare,file = paste0("./2.Microbial community analysis/iCAMP/",prefix,".pNST.compare.",colnames(treat)[i],".csv"))
 
 i=1
 treat.use=treat[,i,drop=FALSE]
@@ -2338,8 +2368,8 @@ icamp.result=icres$CbMPDiCBraya
 icboot=iCAMP::icamp.boot(icamp.result = icamp.result,treat = treat.use,rand.time = rand.time,
                          compare = TRUE,silent = FALSE,between.group = TRUE,ST.estimation = TRUE)
 save(icboot,file=paste0(prefix,".iCAMP.Boot.",colnames(treat)[i],".rda"))
-write.csv(icboot$summary,file = paste0(prefix,".iCAMP.BootSummary.",colnames(treat)[i],".csv"),row.names = FALSE)
-write.csv(icboot$compare,file = paste0(prefix,".iCAMP.Compare.",colnames(treat)[i],".csv"),row.names = FALSE)
+write.csv(icboot$summary,file = paste0("./2.Microbial community analysis/iCAMP/",prefix,".iCAMP.BootSummary.",colnames(treat)[i],".csv"),row.names = FALSE)
+write.csv(icboot$compare,file = paste0("./2.Microbial community analysis/iCAMP/",prefix,".iCAMP.Compare.",colnames(treat)[i],".csv"),row.names = FALSE)
 
 ```
 
@@ -2350,7 +2380,7 @@ write.csv(icboot$compare,file = paste0(prefix,".iCAMP.Compare.",colnames(treat)[
 
 ```{R}
 source("./4.The best practice R pipeline/function/phyloSignal_and_phySigplot.R")
-phypath = "../2.Microbial community analysis/"
+phypath = "./2.Microbial community analysis/"
 phypath2 = paste(phypath,"/phyloSignal/",sep = "")
 dir.create(phypath)
 
@@ -2374,7 +2404,7 @@ head(data)
 
 ```{R}
 library(phyloseq)
-
+data(ps)
 Envnetplot<- paste("./16s_Env_network",sep = "")
 dir.create(Envnetplot)
 ps.merge <- ggClusterNet::merge16S_ITS(ps16s = ps,
@@ -2382,7 +2412,7 @@ ps.merge <- ggClusterNet::merge16S_ITS(ps16s = ps,
                                        N16s = 200)
 ps.merge
 map =  phyloseq::sample_data(ps.merge)
-head(map)
+# head(map)
 map$Group = "one"
 phyloseq::sample_data(ps.merge) <- map
 envRDA.s = vegan::decostand(env1,"hellinger")
@@ -2427,7 +2457,7 @@ library(ggClusterNet)
 data(ps)
 source("./4.The best practice R pipeline/function/FEAST.R",encoding = "UTF-8")
 
-sample_data(ps)
+# sample_data(ps)
 
 result = FEAST(ps = ps,
                group = "Group",

@@ -1,0 +1,69 @@
+<h1>{{{title}}}</h1>
+
+<div class="row">
+  <div class="span8">
+    {{#sections}}
+    <div class="{{{title}}}">
+      <h2>{{{title}}}</h2>
+      {{#contents}}
+      <p>{{{.}}}</p>
+      {{/contents}}
+    </div>
+    {{/sections}}
+    
+    {{#usage}}
+    <h2>Usage</h2>
+    <pre>{{{usage}}}</pre>
+    {{/usage}}
+
+    {{#has_args}}
+    <h2>Arguments</h2>
+    <dl>
+    {{#arguments}}
+      <dt>{{name}}</dt>
+      <dd>{{{description}}}</dd>
+    {{/arguments}}
+    </dl>
+    {{/has_args}}
+
+    {{#examples }}
+    <h2 id="examples">Examples</h2>
+    <pre class="examples">{{{ examples }}}</pre>
+    {{/examples}}
+  </div>
+  <div class="span4" id='sideBar'>
+    {{#package}}
+      <h3>Versions</h3>
+      <a href="https://cran.r-project.org/package=ggtern"><img alt="CRAN_Status_Badge" src="http://www.r-pkg.org/badges/version/ggtern"></a> current, <b>{{version}}</b> development.
+    {{/package}}
+    <!-- <ul>
+      {{#aliases}}<li>{{.}}</li>{{/aliases}}
+    </ul>
+    <ul>
+      {{#keywords}}<li>{{.}}</li>{{/keywords}}
+    </ul> -->
+    {{#seealso}}
+    <h3>See also</h3>
+    {{{ seealso }}}
+    {{/seealso}}
+
+    {{#author}}
+    <h3>Author</h3>
+    {{{ author }}}
+    {{/author}}
+    
+    <div id="stickerXXX">
+      <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+      <!-- ggtern_responsive_TD -->
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-3633876528346053"
+           data-ad-slot="9923422573"
+           data-ad-format="auto"></ins>
+      <script>
+      (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
+  </div>
+  <div class="clear"></div>
+</div>

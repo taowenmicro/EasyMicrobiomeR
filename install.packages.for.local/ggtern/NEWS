@@ -1,0 +1,288 @@
+ggtern 3.4.1
+----------------------------------------------------------------
+* Fix redundant version specifier for methods dependency
+
+ggtern 3.4.0
+----------------------------------------------------------------
+* Fixed broken compatability with ggplot2 3.4.0
+
+ggtern 3.3.5
+----------------------------------------------------------------
+* Fixed broken compatability with ggplot2 3.3.5
+
+ggtern 3.3.0
+----------------------------------------------------------------
+* Fixed broken compatability with ggplot2 3.3.0
+
+ggtern 3.1.1
+----------------------------------------------------------------
+* Bug fix within the stat density tern funtion
+
+ggtern 3.1.0
+----------------------------------------------------------------
+* Fix citation information to reference the JSS article (https://doi.org/10.18637/jss.v087.c03)
+
+ggtern 3.0.0
+----------------------------------------------------------------
+* Bug fixes and S3 methods, 
+* Fixed broken compatability with ggplot2 3.0.0
+
+ggtern 2.2.2
+----------------------------------------------------------------
+* Fixed bug to do with enabling arrows on theme_bw theme preset
+* Added convenience function for changing major or minor ticklengths.
+* Additional datasets
+* Ternary version of hexbin
+* Update the theme(..) function to now include valid arguments relative to the new theme elements
+* New Geometry, geom_tri_tern and stat_tri_tern, which is like hexbin, but on triangular mesh
+
+ggtern 2.2.1
+----------------------------------------------------------------
+* Modified the masked ggplot_gtable and ggplot_build functions, to call the parent versions if the plot is not ternary (ie the functions within the starndard ggplot2 plot), reducing the fragility of the ggtern package to changes in ggplot2
+* Approved geom_encircle from the ggalt package as an approved geometry, as requested by David Zakharov.
+* Fixed error warning excess aesthetic
+* Fixed issue w/ theme, where element blank was being ignored.
+* Mean Ellipses Geomery. Thanks to Ashton Drew from KDV Decision Analysis for requesting this.
+* Fixed inheritence of ternary ticks (tern.axis.ticks), which previousl inherited from axis.line, when it really should inherit from axis.ticks.
+* New Labelling Geometries, geom_text_viewport and geom_label_viewport, for positioning text and labels at fractional coordinates relative to the panel viewport.
+
+ggtern 2.2.0
+----------------------------------------------------------------
+* Tidied up strip_unnaproved function
+* Removed hidden functions no longer used
+* Fixed ggproto modifications, plot build, plot construction and ternary scales
+* Documentation Improvements
+
+ggtern 2.1.5
+----------------------------------------------------------------
+* Fixed bug to do with theme element rendering, some properties were being ignored (Thanks to Ivan Galvan for picking up on this)
+* Created new theme element, and convenience functions, to enable or disable the parsing of text objects into expressions using latex markup. Previously, the parsing was done by default, however now, they are rendered without parsing unless the user states that they wish it to be parsed via the 'tern.plot.latex' theme element, or theme_latex() convenience functions.
+* Improved the logic in handling the breaks / minor breaks and labels when they are to be calculated automatically.
+* Reworked the theme_mesh function, to now accept an ellipsis term, which is passed through to limits_tern. By this token, theme_mesh now works over a restricted plotting region.
+* Improved logic of the getBreaks function, when determining minor breaks
+* Fixed bug in validate_element, when validating plot.margin theme elements, thanks to Degang Wu for picking up the problem
+* Eliminated some masked functions (theme_get, theme_set), reverting back to the ggplot2 originals.
+* Fixed bug with normalisation of data for errorbars, thanks to Andy London for picking up the issue.
+* Added new custom themes: theme_matrix, theme_tropical, theme_bluedark, theme_bluelight
+* Review of documentation for use in staticdocs for website.
+* New Convenience Function for Zooming
+* New three-colored themes (theme_bvbw and theme_bvbg) for colourblind sensitive viewers.
+
+ggtern 2.1.4
+----------------------------------------------------------------
+* Create grid_mesh convenience function
+* Created getLabels function to better handle the creation of the ternary labels, from the known breaks. Have set the earliest label to empty (ie ""), so it doesn't interfere with the axis titles, particularly if the axis titles and first label are wide (ie something like "Top Species" and "50.%" respectively). This is not generally a problem for the default plot where the axis titles and first label are trivial (ie something like "T" and "0")
+* Added Some Basic Demo's under /demo
+* Minor fixes to themes
+* Reviewed the geom_mask, removing two of the hidden layers, as they are now unnessessary
+* Moved seq.tlr to coord proto member
+* Included find_subclass to also now include coord
+* Added a debug option to highlight what is going on with clipping mask
+
+ggtern 2.1.3
+----------------------------------------------------------------
+* Reverted Method arguments in geom_interpolate_tern, errors being raised when 'auto' set as
+* Completely reworked the theme inheritence tree, and theme construction methods, including a base 'dummy' theme (theme_ggtern, which appends and includes all the additional theme elements to the default ggplot2 theme.
+* Removed the root theme elements for ggtern, in favour of inheriting from ggplot2
+* Swapped the theme elements, tern.plot.background and tern.panel.background to be more in-line with the corresponding
+plot.background and panel.background in the parent package.
+* Provided ggtern version for the 'annotate' function
+* Major reworking of the coord_tern axis rendering routine, to work better with the geom_mask, insomuch as that when the mask is not used, all elements are rendered on the background. When the mask is used, the background rendering is suppressed, and the respective elements are rendered on the mask instead, and if they are brought to the front (via theme_gridsontop), then they are suppressed on the background, and the mask, and rendered in the foreground. Have also segregated the various components to clearly indicate when the ticks, borders, grids, background, labels and titles are rendered.
+* Merged theme_bordersontop with theme_gridsontop
+* Changed the default breaks to now include the minimum value, permitting the next item:
+* Modification of the theme_novar_tern to also discard the tern.axis.line.X (X=T,L,R) theme element.
+* Modified plot construction routine to remove the clipping mask (say if they have been manually added) if the 'tern.panel.mask.show' theme element is set to FALSE. This ensures the convenience function theme_nomask() strictly means "Don't Show Clipping Mask"
+
+ggtern 2.1.2
+----------------------------------------------------------------
+* Fixed bug in themes, some of the theme elements were being ignored
+* Added convenience function, and theme element, to turn on or off the clipping mask automatic addition
+* interpolate_tern, automatic bins / breaks now determined prior to transformation to inverse log ratio space. Also, bins / breaks argument defined (was previously not included in signature), and also introduced the ability
+to conduct interpolation on both ilr and cartesian coordinate system, similar to stat_density_tern etc...
+
+ggtern 2.1.1
+----------------------------------------------------------------
+* Fixed bug introduced in previous update, where the manual mask addition was being ignored.
+* Fixed is.logical(na.rm) bug to do with bad ellipsis placement in stats and geoms
+* Added new point geometry, which swaps the colour and fill aesthetics
+* Added new annotation ternary raster, for overlaying images. Included sample raster data (FeldsparRaster)
+
+ggtern 2.1.0
+----------------------------------------------------------------
+* Fixed compatibility issues with ggplot2 v 2.1.0, several modification to this version of ggplot2, broke existing ggtern code
+* Introdcution of geom_isopropX (X = T,L,R)
+
+ggtern 2.0.2
+----------------------------------------------------------------
+* Fixed the stat_interpolation_tern to handle the different modelling methods
+* Better haldling of the 'fullrange' case within the stat_interpolation_tern method
+* Added GeomDl for direct.label
+* Applied label formatter to all labels (title, legend etc...), not just ternary specific labels
+* Fixed bug in theme_custom(...)
+* Fixed bug in how the order of axis label preferences ie, Tarrow << yarrow << T << y << default etc...
+* Created geom_ternary_crosshar new geometry
+* Added some custom legend keys for new geometries
+* Fixed bug with the hshift and vshift theme elements, reduced them to numeric candidates
+* Added Tmark, Lmark and Rmark, new geometries being the components of the geom_crosshair_tern.
+
+ggtern 2.0.1
+----------------------------------------------------------------
+* Fixed minor bugs in interpolation and countouring stats
+* Fixed missing imports
+
+ggtern 2.0.0
+----------------------------------------------------------------
+* Almost entirely re-written package, providing compatability with ggplot2 (>= 2.0.0)
+* Improved axes contruction routine, cleaner & better arrangement of the ternary scales & plot area
+* Implements the use of a manual clipping mask, rather than exclusion of points outside of the plot area
+* Inclusion of several new gemetries
+* Compatable with a larger number of base geometries from ggplot2
+* Now uses a custom rendering mask, which is added by default in the foreground, however, can be placed manually as a layer via geom_mask(...)
+* Standardised the naming / heirachy of the theme elements
+* Added geom_Xisoprop new geometry, for plotting isoproportion lines
+* Implementation of appropriate orthogonal coordinate systems for many of the geometries such as geom_density_ternand geom_interpolation_tern
+* Greater control over the labelling, including expressions and TeX parsing.
+* The function grid.arrange now works perfectly
+* Plots can be rotated using theme_rotate(angle) method
+
+ggtern 1.0.6.1
+----------------------------------------------------------------
+* Replaced the padding argument of the coord_tern constructor, with an insertion of rows and columns around the main panel in the rendering routine, with an associated theme element 'panel.margin.tern', which is distinct from and not to be confused with 'plot.margin' or 'panel.margin'
+* Better logic in determining the major and minor breaks in the event that the user does not specify explicitly
+* Fixed a bug in the Confidence Levels, when inf values where being generaged in the isometric log ratio calculation.
+* Alterations to the theme_custom constructors, for consistency with the theme element names
+* Alterations / typos fixed in documentation
+* Updated the Feldspar Data, Errors were discovered, this has no bearing on the functioning of the package.
+* Added some more global options, which were previously theme defaults, such as tern.vshift, tern.hshift, tern.arrowsep
+* Fixed bug in label checks when handling expressions
+
+ggtern 1.0.6.0
+----------------------------------------------------------------
+* Fixed bug in the rendering of coordinates axes, when not using any breaks or labels for the top axis
+* Greately improved placement, padding and margin logic and use of grid
+* Revised and greatly improved manual clippiing procedure for data outside the ternary surface
+* Added theme_novar_tern function, many thanks to John Szumiloski
+* Added geom_polygon_tern, and used it within geom_confidence and geom_density_tern
+* Added the (heavily requested) contoured smoothing geometry, geom_interpolate_tern
+* Fixed some documentation issues
+
+ggtern 1.0.5.0
+----------------------------------------------------------------
+* Added convenience function theme_custom() to allow the user to control basic theme colours very easily
+* Added geom_line() to the list of approved geometries.
+* Fixed 'abuse of donttest' as required by CRAN
+
+ggtern 1.0.4.0
+----------------------------------------------------------------
+
+BUG FIXES
+* Fixed broken dependency between ggplot2 0.9.3.2 and ggplot 1.0.0 from find_global internal function
+
+ggtern 1.0.3.2
+----------------------------------------------------------------
+* Added convenience functions, and global options for modifying the length of the ternary arrows easily.
+* Added function for putting points in sequence for path plotting, see ?point.in.sequence
+
+BUG FIXES
+* Fixed broken ggsave function, which was not using the local print function.
+* Fixed geom_errorbarR reference in geom_errorbarT and geom_errorbarL aesthetic check.
+* Fixed some missing export functions in NAMESPACE file
+* axis.tern.arrowstart and axis.tern.arrowfinish can now take vectors
+
+ggtern 1.0.3.1
+----------------------------------------------------------------
+BUG FIXES
+* Fixed broken patch in geom_density2d()
+
+ggtern 1.0.3.0
+----------------------------------------------------------------
+* Grid rendered AFTER border
+* Documentation Improvements
+* Inclusion of USDA Soil Classification Data, accessed by: data(USDA)
+* Creation of New geometries for ternary errorbars, ie, geom_errorbarT, geom_errorbarL and geom_errorbarR
+* Creation of convenience functions (theme_showtitles and theme_hidetitles) for hiding or showing the apex titles
+* Creation of convenience functions (theme_showlabels and theme_hidelabels) for hiding or showing the axis ticklabels
+* Better handling of convenience functions for hiding (and showing which is new) major or minor gridlines
+* Improvement on arrow positioning relative to ticks and axis labels.
+* Convenience function for the setting of the ternary arrow baseline (theme_arrowbaseline(value))
+* Removal of grid elements for existing axes (ie not just using blank elements)
+* Creation of theme_minimal, equivalent to the ggplot2 version.
+* Creation of theme_classic, equivalent to the ggplot2 version.
+* Creation of Multiplot function, for arranging multiple plots.
+* Changed the default mapping T=y, L=x and R=z, since it is likely that people new to ternary plots will find this more intuitive, created global options so this can be modified.
+* Modified logic so that T, L and R ALWAYS relate to the Top, Left and Right apex, regardless of assignment in coord_tern(...).
+
+BUG FIXES
+* Labels not assigning correctly when coord_tern() not using default x,y,z mapping.
+* Error in geom_confidence wrt clockwise (existing dependency on ternary.options)
+
+ggtern 1.0.2.0
+----------------------------------------------------------------
+* Ordering of grid rendering was changed relative to the remaining background items
+
+* Global tern.clockwise option was created
+
+* Changed default procession from anticlockwise to clockwise
+
+* Theme nomleclature has been made more like the ggplot2 nomleclature, in the sense that
+  ORIGINAL                SUPERCEDED BY             ALIASES
+  theme_tern_bw()         -> theme_bw()
+  theme_tern_gray()       -> theme_gray()           theme_grey()
+  theme_tern_rgbg()       -> theme_rgbg()           theme_rgb()
+  theme_tern_rgbw()       -> theme_rgbw()
+
+* Theme nomleclature improved for some unique ternary functions.
+  ORIGINAL                SUPERCEDED BY             ALIASES
+  theme_tern_nogrid_major -> theme_nogrid_major()   tern_nogrid_major()
+  theme_tern_nogrid_minor -> theme_nogrid_minor()   tern_nogrid_minor()
+  theme_tern_nogrid       -> theme_nogrid()         tern_nogrid()
+
+* Better Documentation for Theme Convenience Functions
+  
+
+* In the above themes, they have furthermore been slightly changed to be more consistent
+  with that of ggplot2, in terms of the minor and major colors for the default theme_gray.
+
+* Error protocols for version control implemented, same as ggplot2, however, for ggtern.
+
+* New theme elements option for putting ticks INSIDE or OUTSIDE of the axis, OUTSIDE is default. 
+  Convenience functions also created theme_ticksoutside() and theme_ticksinside()
+
+* Clockwise/Anticlockwise axis precession is now controlled by the theme element 'axis.tern.clockwise', as a 'logical'.
+
+* Length of theme elements in 'units', such as major and minor ticks.
+
+* element_ternary fully depreciated in favour of individual theme elements.
+
+* Added functionality for 'secondary ticks' and convenience functions theme_showsecondary(), theme_hidesecondary(), theme_showprimary(), theme_hideprimary()
+
+BUG FIXES
+
+* Correction to logic in .theme_new internal function
+
+* Correction to theme_nogrid(), so that it could be 'added' to other themes.
+
+* Correction to theme element logic when switching between printing of ggplot2 and ggtern objects.
+
+* Ticks rendered after grid, previously it was the other way around, 
+  obvious since inside ticks have been introduced.
+
+* last_coord set to NULL during onLoad, originally it was set to coord_tern(), which was necessary for the default theme elements, however, 
+  is presumptuous in terms of what te user will actually plot.
+
+* Correction of padding by aspect ratio, which was introducing small errrors in ticks, noticiable for long tick sizes.
+
+* Restructured cood_tern() and how it renderd the ternary elements, distinct functions were broken off from the main render_bg routine.
+
+* Correction to throwing points in geom_smooth set, when coordinate limits != c(0,1)
+
+* .theme_nocart(), which destroys all cartesian theme elements, is now applied EVERY TIME a ggtern object is rendered. Previously, if a new theme (say theme_bw()) is applied to an EXISTING ggtern plot (ie plot + theme_bw()), some cartesian theme elements were creeping back into the plot.
+
+ggtern 1.0.1.3
+----------------------------------------------------------------
+* Package accepted for CRAN
+
+BUG FIXES
+
+* Coordinate system was not working as expected when theme_clockwise()
+  was used.

@@ -1,0 +1,81 @@
+<div class="row">
+  <div class="span8">
+    {{{readme}}}
+
+    <h2>Help topics</h2>
+    Please see the following sections, which describe the various features of the{{#package}} {{package}} {{version}}{{/package}} package.
+    {{#sections}}
+      <h3>{{title}}</h3>
+      {{{description}}}
+      
+      <ul class="index">
+      {{#items}}
+      {{#icon}}
+        <li class = "icon">
+          <a href="{{file_out}}"><img src="{{icon}}" width = "40" height = "40" /></a><code><a href="{{file_out}}">{{name}}</a></code>{{aliases}}<br /> 
+          {{{title}}}</li>
+      {{/icon}}
+      {{^icon}}
+        <li>
+          <code><a href="{{file_out}}">{{name}}</a></code>{{aliases}}<br />{{{title}}}</li>
+      {{/icon}}
+      {{/items}}
+      </ul>
+    {{/sections}}
+  </div>
+  
+  <div class="span4" id="sideBar">
+    {{#package}}
+      <h3>Versions</h3>
+      <a href="https://cran.r-project.org/package=ggtern"><img alt="CRAN_Status_Badge" src="http://www.r-pkg.org/badges/version/ggtern"></a> current, <b>{{version}}</b> development.
+    {{/package}}
+    {{#vignettes}}
+    <h3>Vignettes</h3>
+    <ul>
+    {{#vignette}}
+      <li><a href="vignettes/{{filename}}">{{title}}</a></li>
+    {{/vignette}}
+    </ul>
+    {{/vignettes}}
+
+    {{#demos}}
+    <h3>Demos</h3>
+    <ul>
+    {{#demo}}
+      <li><a href="{{filename}}">{{title}}</a></li>
+    {{/demo}}
+    </ul>
+    {{/demos}}
+
+    {{#dependencies}}
+    <h3>Dependencies</h3>
+    <ul>
+      {{#depends}}<li><strong>Depends</strong>: {{depends}}</li>{{/depends}}
+      {{#imports}}<li><strong>Imports</strong>: {{imports}}</li>{{/imports}}
+      {{#suggests}}<li><strong>Suggests</strong>: {{suggests}}</li>{{/suggests}}
+      {{#extends}}<li><strong>Extends</strong>: {{extends}}</li>{{/extends}}
+    </ul>
+    {{/dependencies}}
+
+    <h3>Authors</h3>
+    <ul>
+    {{#authors}}
+      <li>{{{.}}}</li>
+    {{/authors}}
+    </ul>
+    
+    <div id="stickerXXX">
+      <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+      <!-- ggtern_responsive_TD -->
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-3633876528346053"
+           data-ad-slot="9923422573"
+           data-ad-format="auto"></ins>
+      <script>
+      (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
+  </div>
+  <div class="clear"></div>
+</div>

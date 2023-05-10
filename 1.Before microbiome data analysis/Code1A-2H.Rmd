@@ -3,31 +3,40 @@ title: "Using R in microbial analysis"
 author: "Tao Wen(文涛)"
 date: "`r Sys.Date()`"
 output:
+  html_document:
+    df_print: paged
+    theme: cerulean
+    highlight: haddock
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    code_fold: show
+  word_document:
+    toc: yes
+    toc_depth: '3'
   pdf_document:
-  toc: yes
-word_document:
-  toc: yes
-toc_depth: '3'
-html_document:
-  df_print: paged
-theme: cerulean
-highlight: haddock
-toc: yes
-toc_float:
-  collapsed: no
-smooth_scroll: yes
-code_fold: show
-editor_options:
-  chunk_output_type: console
+    toc: yes
+    toc_depth: '3'
 ---
 
-
-
 ```{r setup, include = FALSE}
+path <- '../'
 knitr::opts_chunk$set(
-  collapse = T, echo=T, comment="#>", message=F, warning=F,
-  fig.align="center", fig.width=7, fig.height=5, dpi=150)
+  collapse = T, 
+  echo=T,
+  comment="#>", 
+  message=F,
+  warning=F,
+	fig.align="center",
+  fig.width=7,
+  fig.height=5,
+  dpi=150)
+knitr::opts_knit$set(root.dir = path)
 ```
+
+
 
 
 # Title
@@ -41,17 +50,13 @@ knitr::opts_chunk$set(
 #### Code 1A（Example 1）
 
 # How to import microbiome data?
-getwd()
+
 
 ```{R}
-
 # install.packages("BiocManager")
 # library(BiocManager)
 # install("phyloseq")
 # install("ggtree")
-
-
-
 library(phyloseq)
 library(Biostrings)
 # ?read.delim
@@ -63,7 +68,6 @@ library(ggtree)
 # ?read.tree
 # ?read_tre
 # ?readDNAStringSet
-
 otu = read.delim("./data/otutab.txt",row.names = 1)
 head(otu)
 metadata = read.delim("./data/metadata.tsv",row.names = 1)
@@ -128,8 +132,6 @@ head(dat)
 
 ```{R}
 # install("tidyverse")
-
-
 library(tidyverse)
 library(tidyr)
 library(tibble)
@@ -177,35 +179,24 @@ library(randomForest)
 # Visualization of microbiome data
 # Part 1: Visualizing alpha diversity using ggplot2 package
 
+
 ```{R}
-
-# install("devtools")
-# install.packages("ggalluvial")
-# .libPaths()
-# library("devtools")
-# devtools::install_github("taowenmicro/ggClusterNet")
-# devtools::install_github("taowenmicro/EasyStat")
-
-
+library(ggClusterNet)
+library(phyloseq)
+library(tidyverse)
 
 index = c("Shannon","Inv_Simpson","Pielou_evenness","Simpson_evenness" ,"Richness" ,"Chao1","ACE" )
-
-library(ggClusterNet)
-
-
 
 ps = readRDS("./data/ps_liu.rds")
 samplesize = min(phyloseq::sample_sums(ps))
 ps11  = phyloseq::rarefy_even_depth(ps,sample.size = samplesize)
 mapping = phyloseq::sample_data(ps11)
 ps11 = phyloseq::filter_taxa(ps11, function(x) sum(x ) >0 , TRUE); ps11
-head(mapping)
 mapping$Group = as.factor(mapping$Group)
-mapping$Group
 count = as.data.frame(t(ggClusterNet::vegan_otu(ps11)))
 alpha=vegan::diversity(count, "shannon")
 x = t(count)
-head(x)
+
 Shannon = vegan::diversity(x)
 Shannon
 Inv_Simpson <- vegan::diversity(x, index = "invsimpson")
@@ -229,13 +220,17 @@ sel = c(match("Inv_Simpson",colnames(index)),
         match("Chao1",colnames(index)),
         match("ACE",colnames(index)),
         match("Shannon",colnames(index)))
+
+
 n = length(sel) + 3
 data = cbind(data.frame(ID = 1:length(index$Group),group = index$Group),index[sel])
 head(data)
+
 result = EasyStat::MuiKwWlx2(data = data,num = c(3:(n -1)))
 result1 = EasyStat::FacetMuiPlotresultBox(data = data,num = c(3:(n -1)),
                                           result = result,
-                                          sig_show ="abc",ncol = 3 )
+                                          sig_show ="abc",
+                                          ncol = 3 )
 p1_1 = result1[[1]] +
   ggplot2::guides(fill = guide_legend(title = NULL))
 p1_1
@@ -258,7 +253,7 @@ all = c("observed" , "chao1"  , "diversity_inverse_simpson" , "diversity_gini_si
 
 method = "Richness"
 
-for (i in seq(100,max(phyloseq::sample_sums(ps)), by = 100) ) {
+for (i in seq(100,max(phyloseq::sample_sums(ps)), by = rare) ) {
   otb = as.data.frame(t(ggClusterNet::vegan_otu(ps)))
   otb1 = vegan::rrarefy(t(otb), i)
   psRe= phyloseq::phyloseq(phyloseq::otu_table(as.matrix(otb1),taxa_are_rows = F),phyloseq::sample_data(ps))

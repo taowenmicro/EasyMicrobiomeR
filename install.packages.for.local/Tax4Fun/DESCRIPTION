@@ -1,0 +1,22 @@
+Package: Tax4Fun
+Type: Package
+Title: Prediction of functional profiles from metagenomic 16S rRNA data
+Version: 0.3.1
+Date: 2014-09-28
+Author: Kathrin P. Asshauer
+Maintainer: Kathrin P. Asshauer <kasshau@gwdg.de>
+Description: The characterization of phylogenetic and functional diversity are
+    key elements in the analysis of microbial communities. Amplicon-based
+    sequencing of marker genes, such as 16S rRNA, is a powerful tool for
+    assessing and comparing the structure of microbial communities at a high
+    phylogenetic resolution. Tax4Fun predicts functional and metabolic
+    capabilities of microbial communities based on 16S rRNA datasets. Tax4Fun
+    allows easy processing of the output from SILVAngs
+    (https://www.arb-silva.de/ngs/), QIIME (http://qiime.org/) or any other
+    analysis pipeline using the SILVA database (https://www.arb-silva.de/) as
+    reference. Tax4Fun provides a good approximation to functional profiles
+    obtained from metagenomic shotgun sequencing approaches.
+Depends: Matrix,qiimer,biom,R(>= 3.0.2)
+License: GPL v3
+LazyData: TRUE
+Packaged: 2015-06-24 13:35:49 UTC; kathrin

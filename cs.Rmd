@@ -1,0 +1,4194 @@
+---
+title: "Using R in microbial analysis-2"
+author: "Tao Wen(文涛)"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    theme: cerulean
+    highlight: haddock
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    code_fold: show
+  word_document:
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r setup, include = FALSE}
+path <- './4.The best practice R pipeline'
+knitr::opts_chunk$set(
+  collapse = T, 
+  echo=T,
+  comment="#>", 
+  message=F,
+  warning=F,
+	fig.align="center",
+  fig.width=7,
+  fig.height=5,
+  dpi=150)
+knitr::opts_knit$set(root.dir = path)
+```
+
+
+
+
+## make phyloseq object (构建phyloseq对象)
+
+
+```{r}
+# Reading the raw file（原始文件读取）
+
+metadata = read.delim("./data/data.ps/metadata.tsv")
+row.names(metadata) = metadata$SampleID
+otutab = read.table("./data/data.ps/otutab.txt", header=T, row.names=1, sep="\t", comment.char="", stringsAsFactors = F)
+taxonomy = read.table("./data/data.ps/taxonomy.txt", header=T, row.names=1, sep="\t", comment.char="", stringsAsFactors = F)
+
+library(ggtree)
+tree = read.tree("./data/data.ps/otus.tree")
+
+library(Biostrings)
+rep = readDNAStringSet("./data/data.ps/otus.fa")
+
+# Import phyloseq package（导入phyloseq(ps)R包）
+
+library(phyloseq)
+
+ps = phyloseq(sample_data(metadata),
+              otu_table(as.matrix(otutab), taxa_are_rows=TRUE), 
+              tax_table(as.matrix(taxonomy)),
+              phy_tree(tree),
+              refseq(rep)
+              )
+ps
+
+saveRDS(ps,"./data/data.ps/make.ps.rds")
+
+```
+
+
+## Preparing data analysis (数据分析准备）
+
+Import data (ps object) and R packages（导入数据(ps对象)，R包）
+
+
+```{r}
+# BiocManager::install("ggthemes")
+
+library(tidyverse)
+library(phyloseq)
+#--输入和设定构建好的ps文件#-----
+ps0 = base::readRDS("./data/dataNEW/ps_16s.rds")
+
+#-扩增子分析需要导入的R包#-----------
+
+  library(ggClusterNet)
+  library(EasyStat)
+  library(fs)
+  library(ggthemes)
+  library(RColorBrewer)#调色板调用包
+  library(magrittr)
+  library(MicrobiotaProcess)
+  library(ggsignif)
+  library(ggtree)
+  library(ggtreeExtra)
+  library(ggstar)
+  library(MicrobiotaProcess)
+  library(ggnewscale)
+  library(grid)
+
+# 建立结构保存一级目录#--------
+result_path <- paste("./","/result_and_plot/",sep = "")
+fs::dir_create(result_path)
+res1path <- paste(result_path,"/Base_diversity_16s",sep = "")
+fs::dir_create(res1path)
+
+
+#-设定两个所用主题
+
+
+mytheme1 = ggplot2::theme_bw() + ggplot2::theme(
+  panel.background=  ggplot2::element_blank(),
+  panel.grid=  ggplot2::element_blank(),
+  legend.position="right",
+  legend.title =  ggplot2::element_blank(),
+  legend.background= ggplot2::element_blank(),
+  legend.key= ggplot2::element_blank(),
+  plot.title =  ggplot2::element_text(vjust = -8.5,hjust = 0.1),
+  axis.title.y =  ggplot2::element_text(colour = "black"),
+  axis.title.x = ggplot2::element_text(),
+  axis.text =  ggplot2::element_text(),
+  axis.text.x =  ggplot2::element_text(),
+  axis.text.y =  ggplot2::element_text(),
+  legend.text =  ggplot2::element_text()
+)
+
+
+mytheme2 = ggplot2::theme_bw() + ggplot2::theme(
+  panel.background=  ggplot2::element_blank(),
+  panel.grid=  ggplot2::element_blank(),
+  legend.position="right",
+  
+  legend.title =  ggplot2::element_blank(),
+  legend.background=  ggplot2::element_blank(),
+  legend.key= ggplot2::element_blank(),
+  plot.title =  ggplot2::element_text(vjust = -8.5,hjust = 0.1),
+  axis.title.y =  ggplot2::element_text(),
+  axis.title.x = ggplot2::element_text(),
+  axis.text =  ggplot2::element_text(),
+  axis.text.x =  ggplot2::element_text(angle = 90),
+  axis.text.y =  ggplot2::element_text(),
+  legend.text =  ggplot2::element_text()
+)
+
+
+#---扩增子环境布置
+colset1 <- RColorBrewer::brewer.pal(9,"Set1")
+colset2 <- RColorBrewer::brewer.pal(12,"Paired")
+colset3 <- c(RColorBrewer::brewer.pal(11,"Set1"),RColorBrewer::brewer.pal(9,"Pastel1"))
+colset4 = colset3
+
+
+ps = ps0
+
+
+#--提取有多少个分组#-----------
+gnum = phyloseq::sample_data(ps)$Group %>% unique() %>% length()
+gnum
+# 设定排序顺序
+axis_order =  phyloseq::sample_data(ps)$Group %>%unique();axis_order
+
+ps = ps0
+
+ps_biost = ggClusterNet::filter_OTU_ps(ps = ps,Top = 500)
+
+#--R 语言做lefse法分析-过滤#----------
+ps_Rlefse = ggClusterNet::filter_OTU_ps(ps = ps,Top = 400)
+
+
+#-------功能预测#----
+if (is.null(ps@refseq)) {
+  Tax4Fun = FALSE
+} else if(!is.null(ps@refseq)){
+  Tax4Fun = TRUE
+}
+
+ps.t = ps %>% ggClusterNet::filter_OTU_ps(500)
+
+if (Tax4Fun) {
+  dir.create("data")
+  otu = ps.t %>% 
+    # ggClusterNet::filter_OTU_ps(1000) %>%
+    ggClusterNet:: vegan_otu() %>%
+    t() %>%
+    as.data.frame()
+  # write.table(otu,"./data/otu.txt",quote = F,row.names = T,col.names = T,sep = "\t")
+  rep = ps.t %>% 
+    # ggClusterNet::filter_OTU_ps(1000) %>%
+    phyloseq::refseq()
+  rep
+  # library(Biostrings)
+  Biostrings::writeXStringSet(rep,"./data/otu.fa")
+  ps.t = ps.t
+  
+  #开头空一格字符保存
+  write.table("\t", "./data/otu.txt",append = F, quote = F, eol = "", row.names = F, col.names = F)
+  # 保存统计结果，有waring正常
+  write.table(otu, "./data/otu.txt", append = T, quote = F, sep="\t", eol = "\n", na = "NA", dec = ".", row.names = T, col.names = T)     
+
+}
+
+#-构建保存路径
+otupath = paste(res1path,"/OTU/",sep = "");otupath
+dir.create(otupath)
+
+```
+
+### Output basic information table（基础信息表格输出）
+
+
+```{r}
+
+
+
+#--基本表格保存#----------
+tabpath = paste(otupath,"/report_table/",sep = "")
+dir.create(tabpath)
+#--raw otu tab
+otu = as.data.frame(t(ggClusterNet::vegan_otu(ps0)))
+head(otu)
+FileName <- paste(tabpath,"/otutab.csv", sep = "")
+write.csv(otu,FileName,sep = "")
+# tax table
+tax = as.data.frame((ggClusterNet::vegan_tax(ps0)))
+head(tax)
+FileName <- paste(tabpath,"/tax.csv", sep = "")
+write.csv(otu,FileName,sep = "")
+
+ps0_rela  = phyloseq::transform_sample_counts(ps0, function(x) x / sum(x) );ps0_rela 
+#--norm otu tab
+otu_norm = as.data.frame(t(ggClusterNet::vegan_otu(ps0_rela)))
+FileName <- paste(tabpath,"/otutab_norm.csv", sep = "")
+write.csv(otu_norm,FileName,sep = "")
+
+otutax <- cbind(as.data.frame(t(ggClusterNet::vegan_otu(ps0_rela))),as.data.frame((ggClusterNet::vegan_tax(ps0_rela))))
+FileName <- paste(tabpath,"/otutax_norm.csv", sep = "")
+write.csv(otutax,FileName,sep = "")
+
+
+for (i in 2: length(phyloseq::rank_names(ps0))) {
+  psi  <- ggClusterNet::tax_glom_wt(ps = ps0,ranks = phyloseq::rank_names(ps0)[i])
+  #--raw otu tab
+  otu = as.data.frame(t(ggClusterNet::vegan_otu(psi)))
+  FileName <- paste(tabpath,"/otutab",phyloseq::rank_names(ps0)[i],".csv", sep = "")
+  write.csv(otu,FileName,sep = "")
+  # tax table
+  tax = as.data.frame((ggClusterNet::vegan_tax(ps0)))
+  FileName <- paste(tabpath,"/tax",phyloseq::rank_names(ps0)[i],".csv", sep = "")
+  write.csv(otu,FileName,sep = "")
+  
+  psi_rela  = phyloseq::transform_sample_counts(psi, function(x) x / sum(x) );psi_rela 
+  #--norm otu tab
+  otu_norm = as.data.frame(t(ggClusterNet::vegan_otu(psi_rela)))
+  FileName <- paste(tabpath,"/otutab_norm",phyloseq::rank_names(psi)[i],".csv", sep = "")
+  write.csv(otu_norm,FileName,sep = "")
+  
+  otutax <- cbind(as.data.frame(t(ggClusterNet::vegan_otu(psi_rela))),as.data.frame((ggClusterNet::vegan_tax(psi_rela))))
+  FileName <- paste(tabpath,"/otutax_norm",phyloseq::rank_names(ps0)[i],".csv", sep = "")
+  write.csv(otutax,FileName,sep = "")
+}
+
+```
+
+
+## 1.Community diversity analysis（1.群落多样性分析）
+
+### alpha diversity（alpha多样性）
+
+
+```{r}
+
+alppath = paste(otupath,"/alpha/",sep = "")
+dir.create(alppath)
+
+#---------多种指标alpha多样性分析加出图-标记显著性
+  group = "Group"
+# 设定排序顺序
+axis_order =  phyloseq::sample_data(ps)$Group %>%unique();axis_order
+
+  samplesize = min(phyloseq::sample_sums(ps))
+  if (samplesize == 0) {
+    print("0 number sequence of some samples")
+    print("median number were used")
+    ps11  = phyloseq::rarefy_even_depth(ps,sample.size = samplesize)
+  } else{
+    ps11  = phyloseq::rarefy_even_depth(ps,sample.size = samplesize)
+  }
+  
+  mapping = phyloseq::sample_data(ps11)
+  ps11 = phyloseq::filter_taxa(ps11, function(x) sum(x ) >0 , TRUE); ps11
+  # head(mapping)
+  colnames(mapping) = gsub(group,"AA", colnames(mapping))
+  
+  mapping$Group = mapping$AA
+  mapping$Group = as.factor(mapping$Group)
+  # mapping$Group 
+
+  count = as.data.frame(t(ggClusterNet::vegan_otu(ps11)))
+
+  alpha=vegan::diversity(count, "shannon")
+  
+  x = t(count) ##转置，行为样本，列为OTU
+  # head(x)
+
+  Shannon = vegan::diversity(x)  ##默认为shannon
+  Shannon
+  Inv_Simpson <- vegan::diversity(x, index = "invsimpson")
+  Inv_Simpson
+  
+  #计算OTU数量
+  S <- vegan::specnumber(x);S  ##每个样本物种数。等价于S2 = rowSums(x>0)
+  S2 = rowSums(x>0)
+  
+  #多样性指标：均匀度Pielou_evenness，Simpson_evenness
+  Pielou_evenness <- Shannon/log(S)
+  Simpson_evenness <- Inv_Simpson/S
+  est <- vegan::estimateR(x)
+  est <- vegan::estimateR(x)
+  Richness <- est[1, ]
+  Chao1 <- est[2, ]
+  ACE <- est[4, ]
+  report = cbind(Shannon, Inv_Simpson, Pielou_evenness, Simpson_evenness,
+                 Richness, Chao1,ACE) 
+  head(report)
+  
+  alp = merge(mapping,report , by="row.names",all=F)
+
+index = c("Shannon","Inv_Simpson","Pielou_evenness","Simpson_evenness" ,"Richness" ,"Chao1","ACE" )
+#--多种组合alpha分析和差异分析出图
+index= alp
+# head(index)
+
+#--提取三个代表指标作图
+sel = c(match("Shannon",colnames(index)),match("Richness",colnames(index)),match("Pielou_evenness",colnames(index)))
+data = cbind(data.frame(ID = 1:length(index$Group),group = index$Group),index[sel])
+# head(data)
+
+result = EasyStat::MuiaovMcomper2(data = data,num = c(3:5))
+
+FileName <- paste(alppath,"/alpha_diversity_different_label.csv", sep = "")
+write.csv(result,FileName,sep = "")
+FileName <- paste(alppath,"/alpha_diversity_index.csv", sep = "")
+write.csv(index,FileName,sep = "")
+
+result1 = EasyStat::FacetMuiPlotresultBox(data = data,num = c(3:5),
+                                result = result,
+                                sig_show ="abc",ncol = 3 )
+p1_1 = result1[[1]] + 
+  ggplot2::scale_x_discrete(limits = axis_order) + 
+  mytheme1 +
+  ggplot2::guides(fill = guide_legend(title = NULL)) +
+  ggplot2::scale_fill_manual(values = colset1)
+p1_1
+
+#如何升级展示-提取数据用小提琴图展示
+p1_1 = result1[[2]] %>% ggplot(aes(x=group , y=dd )) + 
+  geom_violin(alpha=1, aes(fill=group)) +
+  geom_jitter( aes(color = group),position=position_jitter(0.17), size=3, alpha=0.5)+
+  labs(x="", y="")+
+  facet_wrap(.~name,scales="free_y",ncol  = 3) +
+  # theme_classic()+
+  geom_text(aes(x=group , y=y ,label=stat)) +
+  ggplot2::scale_x_discrete(limits = axis_order) + 
+  mytheme1 +
+  guides(color=guide_legend(title = NULL),
+         shape=guide_legend(title = NULL),
+         fill = guide_legend(title = NULL)
+         ) +
+  ggplot2::scale_fill_manual(values = colset1)
+p1_1
+
+res = EasyStat::FacetMuiPlotresultBar(data = data,num = c(3:5),result = result,sig_show ="abc",ncol = 3)
+p1_2 = res[[1]]+ scale_x_discrete(limits = axis_order) + guides(color = FALSE) +
+  mytheme1+ 
+  guides(fill = guide_legend(title = NULL))+
+  scale_fill_manual(values = colset1)
+p1_2
+
+res = EasyStat::FacetMuiPlotReBoxBar(data = data,num = c(3:5),result = result,sig_show ="abc",ncol = 3)
+p1_3 = res[[1]]+ scale_x_discrete(limits = axis_order) + 
+  mytheme1 + 
+  guides(fill = guide_legend(title = NULL))+
+  scale_fill_manual(values = colset1)
+p1_3
+
+FileName <- paste(alppath,"Alpha_Facet_box", ".pdf", sep = "")
+ggsave(FileName, p1_1, width = ((1 + gnum) * 3), height =4,limitsize = FALSE)
+
+FileName <- paste(alppath,"Alpha_Facet_bar", ".pdf", sep = "")
+ggsave(FileName, p1_2, width = ((1 + gnum) * 3), height = 4,limitsize = FALSE)
+
+FileName <- paste(alppath,"Alpha_Facet_boxbar", ".pdf", sep = "")
+ggsave(FileName, p1_3, width = ((1 + gnum) * 3), height = 4,limitsize = FALSE)
+
+FileName <- paste(alppath,"Alpha_Facet_box", ".jpg", sep = "")
+ggsave(FileName, p1_1, width = ((1 + gnum) * 3), height =4,limitsize = FALSE)
+
+FileName <- paste(alppath,"Alpha_Facet_bar", ".jpg", sep = "")
+ggsave(FileName, p1_2, width = ((1 + gnum) * 3), height = 4,limitsize = FALSE)
+
+FileName <- paste(alppath,"Alpha_Facet_boxbar", ".jpg", sep = "")
+ggsave(FileName, p1_3, width = ((1 + gnum) * 3), height = 4,limitsize = FALSE)
+
+#--总体差异检测alpha多样性
+krusk1 = ggpubr::compare_means( Shannon ~ group, data=data, method = "kruskal.test")
+krusk2 = ggpubr::compare_means( Richness ~ group, data=data, method = "kruskal.test")
+krusk3 = ggpubr::compare_means( Pielou_evenness ~ group, data=data, method = "kruskal.test")
+
+dat = rbind(krusk1,krusk2,krusk3) %>% as.data.frame()
+FileName <- paste(alppath,"/alpha_diversity_index_all_p_Kruskal-Wallis.csv", sep = "")
+write.csv(dat,FileName,sep = "")
+
+
+```
+
+
+### alpha-rarefaction curve（alpha稀释曲线）
+
+
+```{r}
+
+rare <- mean(phyloseq::sample_sums(ps))/10
+
+
+  method = "Richness"
+  group = "Group"
+  start = 100
+  step = 3000
+  
+  # library(microbiome)
+  phyRare = function(ps = ps,N = 3000){
+    
+    otb = as.data.frame(t(ggClusterNet::vegan_otu(ps)))
+    otb1 = vegan::rrarefy(t(otb), N)
+    ps = phyloseq::phyloseq(phyloseq::otu_table(as.matrix(otb1),taxa_are_rows = F),
+                            phyloseq::sample_data(ps)
+    )
+    
+    return(ps)
+  }
+  
+
+#---- 全部指标#----
+all = c("observed" , "chao1"  , "diversity_inverse_simpson" , "diversity_gini_simpson",
+          "diversity_shannon"   ,   "diversity_fisher"   ,  "diversity_coverage"     ,    "evenness_camargo",
+          "evenness_pielou"    ,   "evenness_simpson"       ,    "evenness_evar" ,   "evenness_bulla",
+          "dominance_dbp"      ,  "dominance_dmn"        ,      "dominance_absolute"   ,      "dominance_relative",
+          "dominance_simpson"      ,    "dominance_core_abundance" ,  "dominance_gini"  ,           "rarity_log_modulo_skewness",
+          "rarity_low_abundance"   ,    "rarity_noncore_abundance",  "rarity_rare_abundance")
+  
+  #--- 运行计算#----
+  for (i in seq(start,max(phyloseq::sample_sums(ps)), by = step) ) {
+    psRe = phyRare(ps = ps, N = i)
+    
+
+    
+    if (method == "Richness") {
+      count = as.data.frame(t(ggClusterNet::vegan_otu(psRe)))
+      # head(count)
+      x = t(count) ##转置，行为样本，列为OTU
+      est = vegan::estimateR(x)
+      index = est[1, ]
+    }
+    
+    if (method %in% c("ACE")) {
+      ap_phy = phyloseq::estimate_richness(psRe, measures =method)
+      # head(ap_phy)
+      index = ap_phy$ACE
+    }
+    
+    if (method %in% all) {
+      alp_mic = microbiome::alpha(psRe,index=method)
+      # head(alp_mic)
+      index = alp_mic[,1]
+    }
+    
+    tab = data.frame(ID = names(phyloseq::sample_sums(psRe)))
+    #得到多样性的列
+    tab = cbind(tab,i,index)
+    # head(tab)
+    if (i == start) {
+      result = tab
+    }
+    if (i != start) {
+      result = rbind(result,tab)
+    }
+  }
+  
+
+  for (ii in 1:length(phyloseq::sample_sums(ps))) {
+    result$i[result$i > phyloseq::sample_sums(ps)[ii][[1]]]
+    df_filter= filter(result, ID ==names(phyloseq::sample_sums(ps)[ii]) &i > phyloseq::sample_sums(ps)[ii][[1]])
+    result$index
+    result$index[result$i>phyloseq::sample_sums(ps)[ii][[1]]]
+    a = result$i>phyloseq::sample_sums(ps)[ii][[1]]
+    a[a == FALSE] = "a"
+    b = result$ID == names(phyloseq::sample_sums(ps)[ii])
+    b[b == FALSE] = "b"
+    result$index[a== b] = NA
+  }
+  #----直接给列，添加分组#----
+  map = as.data.frame(phyloseq::sample_data(ps))
+  result$Group = map$Group
+  
+  ## 绘制稀释曲线
+  main_theme =theme(panel.grid.major=element_blank(),
+                    panel.grid.minor=element_blank(),
+                    plot.title = element_text(vjust = -8.5,hjust = 0.1),
+                    axis.title.y =element_text(size = 7,face = "bold",colour = "black"),
+                    axis.title.x =element_text(size = 7,face = "bold",colour = "black"),
+                    axis.text = element_text(size = 7,face = "bold"),
+                    axis.text.x = element_text(colour = "black",size = 7),
+                    axis.text.y = element_text(colour = "black",size = 7),
+                    legend.text = element_text(size = 7,face = "bold")
+  )
+  head(result)
+  result = result %>% dplyr::filter(index != "NA")
+  result$ID = as.factor(result$ID)
+
+  p = ggplot(data= result,aes(x = i,y = index,group = ID,color = Group)) +
+    geom_line() +
+    labs(x= "",y=method,title="") +theme_bw()+main_theme
+  p
+  #---分组求均值和标准误+se#---
+  data = result
+  groups= dplyr::group_by(data, Group,i)
+  data2 = dplyr::summarise(groups , mean(index), sd(index))
+  # head(data2)
+  colnames(data2) = c(colnames(data2)[1:2],"mean","sd")
+  # 按组均值绘图
+  p2 = ggplot(data= data2,aes(x = i,y = mean,colour = Group)) +
+    geom_line()+
+    labs(x= "",y=method,title="") +theme_bw()+main_theme
+  # p2
+  
+  # 组均值+标准差
+  p4 = ggplot(data=data2,aes(x = i,y = mean,colour = Group)) +
+    geom_errorbar(data = data2,aes(ymin=mean - sd, ymax=mean + sd,colour = Group),alpha = 0.4, width=.1)+labs(x= "",y=method,title="") +theme_bw()+main_theme
+  p4
+  # return(list(p,table = result,p2,p4))
+
+
+#--提供单个样本溪稀释曲线的绘制
+p2_1 <- p +
+  mytheme1 +
+  guides(fill = guide_legend(title = NULL))+
+  scale_fill_manual(values = colset1)
+## 提供数据表格，方便输出
+raretab <- result
+head(raretab)
+#--按照分组展示稀释曲线
+p2_2 <- p2 +
+  mytheme1 +
+  guides(fill = guide_legend(title = NULL))+
+  scale_fill_manual(values = colset1)
+#--按照分组绘制标准差稀释曲线
+p2_3 <- p4 +
+  mytheme1 +
+  guides(fill = guide_legend(title = NULL))+
+  scale_fill_manual(values = colset1)
+
+
+FileName <- paste(alppath,"Alpha_rare_sample", ".pdf", sep = "")
+ggsave(FileName, p2_1, width = 8, height =6)
+FileName <- paste(alppath,"Alpha_rare_group", ".pdf", sep = "")
+ggsave(FileName, p2_2, width = 8, height =6)
+FileName <- paste(alppath,"Alpha_rare_groupwithSD", ".pdf", sep = "")
+ggsave(FileName, p2_3, width = 8, height =6)
+FileName <- paste(alppath,"Alpha_rare_sample", ".jpg", sep = "")
+ggsave(FileName, p2_1, width = 8, height =6)
+FileName <- paste(alppath,"Alpha_rare_group", ".jpg", sep = "")
+ggsave(FileName, p2_2, width = 8, height =6)
+FileName <- paste(alppath,"Alpha_rare_groupwithSD", ".jpg", sep = "")
+ggsave(FileName, p2_3, width = 8, height =6)
+
+
+FileName <- paste(alppath,"/Alpha_rare_data.csv", sep = "")
+write.csv(raretab,FileName,sep = "")
+
+
+```
+
+
+### beta diversity（beta多样性）
+
+
+```{r}
+
+betapath = paste(otupath,"/beta/",sep = "")
+dir.create(betapath)
+
+group = "Group"
+dist = "bray"
+method ="PCoA"
+Micromet = "adonis"
+pvalue.cutoff = 0.05
+pair=TRUE
+
+# 求取相对丰度#----
+ps1_rela = phyloseq::transform_sample_counts(ps, function(x) x / sum(x) )
+
+
+# 排序方法选择#----
+#---------如果选用DCA排序
+if (method == "DCA") {
+  # method = "DCA"
+  ordi = phyloseq::ordinate(ps1_rela, method=method, distance=dist)
+  #提取样本坐标
+  points = ordi$rproj[,1:2]
+  colnames(points) = c("x", "y") #命名行名
+  #提取特征值
+  eig = ordi$evals^2
+}
+
+#---------CCA排序#----
+if (method == "CCA") {
+  # method = "CCA"
+  ordi = phyloseq::ordinate(ps1_rela, method=method, distance=dist)
+  #样本坐标,这里可选u或者v矩阵
+  points = ordi$CA$v[,1:2]
+  colnames(points) = c("x", "y") #命名行名
+  #提取特征值
+  eig = ordi$CA$eig^2
+}
+
+#---------RDA排序#----
+if (method == "RDA") {
+  # method ="RDA"
+  ordi = phyloseq::ordinate(ps1_rela, method=method, distance=dist)
+  #样本坐标,这里可选u或者v矩阵
+  points = ordi$CA$v[,1:2]
+  colnames(points) = c("x", "y") #命名行名
+  #提取特征值
+  eig = ordi$CA$eig
+}
+
+#---------DPCoA排序#----
+# 不用做了，不选择这种方法了，这种方法运行太慢了
+
+#---------MDS排序#----
+if (method == "MDS") {
+  # method = "MDS"
+  # ordi = ordinate(ps1_rela, method=ord_meths[i], distance=dist)
+  ordi = phyloseq::ordinate(ps1_rela, method=method, distance=dist)
+  #样本坐标
+  points = ordi$vectors[,1:2]
+  colnames(points) = c("x", "y") #命名行名
+  #提取解释度
+  eig = ordi$values[,1]
+}
+
+#---------PCoA排序#----
+if (method == "PCoA") {
+  # method = "PCoA"
+  unif = phyloseq::distance(ps1_rela , method=dist, type="samples")
+  #这里请记住pcoa函数
+  pcoa = stats::cmdscale(unif, k=2, eig=T) # k is dimension, 3 is recommended; eig is eigenvalues
+  points = as.data.frame(pcoa$points) # 获得坐标点get coordinate string, format to dataframme
+  colnames(points) = c("x", "y") #命名行名
+  eig = pcoa$eig
+}
+
+#----PCA分析#----
+
+otu_table = as.data.frame(t(ggClusterNet::vegan_otu(ps1_rela )))
+# head(otu_table)
+# method = "PCA"
+if (method == "PCA") {
+  otu.pca = stats::prcomp(t(otu_table), scale.default = TRUE)
+  #提取坐标
+  points = otu.pca$x[,1:2]
+  colnames(points) = c("x", "y") #命名行名
+  # #提取荷载坐标
+  # otu.pca$rotation
+  # 提取解释度,这里提供的并不是特征值而是标准差，需要求其平方才是特征值
+  eig=otu.pca$sdev
+  eig=eig*eig
+}
+
+# method = "LDA"
+#---------------LDA排序#----
+if (method == "LDA") {
+  #拟合模型
+  # library(MASS)
+  data = t(otu_table)
+  # head(data)
+  data = as.data.frame(data)
+  # data$ID = row.names(data)
+  data = scale(data, center = TRUE, scale = TRUE)
+  dim(data)
+  data1 = data[,1:10]
+  map = as.data.frame(sample_data(ps1_rela))
+  model = MASS::lda(data, map$Group)
+
+  # 提取坐标
+  ord_in = model
+  axes = c(1:2)
+  points = data.frame(predict(ord_in)$x[, axes])
+  colnames(points) = c("x", "y") #命名行名
+  # 提取解释度
+  eig= ord_in$svd^2
+}
+
+#---------------NMDS排序#----
+# method = "NMDS"
+
+if (method == "NMDS") {
+  #---------如果选用NMDS排序
+  # i = 5
+  # dist = "bray"
+  ordi = phyloseq::ordinate(ps1_rela, method=method, distance=dist)
+  #样本坐标,
+  points = ordi$points[,1:2]
+  colnames(points) = c("x", "y") #命名行名
+  #提取stress
+  stress = ordi$stress
+  stress= paste("stress",":",round(stress,2),sep = "")
+}
+
+
+#---------------t-sne排序#----
+# method = "t-sne"
+if (method == "t-sne") {
+  data = t(otu_table)
+  # head(data)
+  data = as.data.frame(data)
+  # data$ID = row.names(data)
+  #
+  data = scale(data, center = TRUE, scale = TRUE)
+
+  dim(data)
+  map = as.data.frame(sample_data(ps1_rela))
+  # row.names(map)
+  #---------tsne
+  # install.packages("Rtsne")
+  # library(Rtsne)
+
+  tsne = Rtsne::Rtsne(data,perplexity = 3)
+
+  # 提取坐标
+  points = as.data.frame(tsne$Y)
+  row.names(points) =  row.names(map)
+  colnames(points) = c("x", "y") #命名行名
+  stress= NULL
+}
+
+
+#----差异分析#----
+
+#----整体差异分析#----
+g = sample_data(ps)$Group %>% unique() %>% length()
+n = sample_data(ps)$Group%>% length()
+o = n/g
+
+source("./function/MicroTest.R")
+source("./function/pairMicroTest.R")
+
+
+
+if (o >= 3) {
+  title1 = MicroTest(ps = ps1_rela, Micromet = Micromet, dist = dist)
+  title1
+} else{
+  title1 = NULL
+}
+
+
+
+if (F) {
+  #----两两比较#----
+  pairResult = pairMicroTest(ps = ps1_rela, Micromet = Micromet, dist = dist)
+  
+} else {
+  pairResult = "no result"
+}
+
+
+#----绘图#----
+map = as.data.frame(phyloseq::sample_data(ps1_rela))
+map$Group = as.factor(map$Group)
+colbar = length(levels(map$Group))
+
+points = cbind(points, map[match(rownames(points), rownames(map)), ])
+# head(points)
+points$ID = row.names(points)
+
+
+if (method %in% c("DCA", "CCA", "RDA",  "MDS", "PCoA","PCA","LDA")) {
+  p2 =ggplot(points, aes(x=x, y=y, fill = Group)) +
+    geom_point(alpha=.7, size=5, pch = 21) +
+    labs(x=paste0(method," 1 (",format(100*eig[1]/sum(eig),digits=4),"%)"),
+         y=paste0(method," 2 (",format(100*eig[2]/sum(eig),digits=4),"%)"),
+         title=title1) +
+    stat_ellipse(linetype=2,level=0.68,aes(group=Group, colour=Group))
+
+  p3 = p2+ggrepel::geom_text_repel(aes(label=points$ID),size = 5)
+  p3
+}
+
+
+if (method %in% c("NMDS")) {
+  p2 =ggplot(points, aes(x=x, y=y, fill = Group)) +
+    geom_point(alpha=.7, size=5, pch = 21) +
+    labs(x=paste(method,"1", sep=""),
+         y=paste(method,"2",sep=""),
+         title=stress)+
+    stat_ellipse( linetype = 2,level = 0.65,aes(group  =Group, colour =  Group))
+  
+  p3 = p2+ggrepel::geom_text_repel( aes(label=points$ID),size=4)
+  p3
+  if (method %in% c("t-sne")) {
+    supp_lab = labs(x=paste(method,"1", sep=""),y=paste(method,"2",sep=""),title=title)
+   p2 = p2 + supp_lab
+   p3 = p3 + supp_lab
+  }
+  eig = NULL
+}
+
+if (method %in% c("t-sne")) {
+  p2 =ggplot(points, aes(x=x, y=y, fill = Group)) +
+    geom_point(alpha=.7, size=5, pch = 21) +
+    labs(x=paste(method,"1", sep=""),
+         y=paste(method,"2",sep=""))+
+    stat_ellipse( linetype = 2,level = 0.65,aes(group  =Group, colour =  Group))
+  
+  p3 = p2+ggrepel::geom_text_repel( aes(label=points$ID),size=4)
+  p3
+  if (method %in% c("t-sne")) {
+    supp_lab = labs(x=paste(method,"1", sep=""),y=paste(method,"2",sep=""),title=title1)
+    p2 = p2 + supp_lab
+    p3 = p3 + supp_lab
+  }
+  eig = NULL
+}
+
+
+
+
+  p3_1 = p2 + 
+    scale_fill_manual(values = colset1)+
+    scale_color_manual(values = colset1,guide = F) +
+    mytheme1 + 
+    theme(legend.position = c(0.2,0.2))
+  p3_1
+  #带标签图形出图
+  p3_2 = p3 +
+    scale_fill_manual(values = colset1)+
+    scale_color_manual(values = colset1,guide = F) + 
+    mytheme1 + 
+    theme(legend.position = c(0.2,0.2))
+  p3_2
+  
+  FileName <- paste(betapath,"/a2_",method,"bray.pdf", sep = "")
+  ggsave(FileName, p3_1, width = 8, height = 8)
+  FileName1 <- paste(betapath,"/a2_",method,"",method,"bray.jpg", sep = "")
+  ggsave(FileName1 , p3_1, width = 12, height = 12)
+  
+  FileName <- paste(betapath,"/a2_",method,"bray_label.pdf", sep = "")
+  ggsave(FileName, p3_2, width = 12, height = 12)
+  FileName1 <- paste(betapath,"/a2_",method,"bray_label.jpg", sep = "")
+  ggsave(FileName1 , p3_2, width = 12, height = 12)
+  
+  # 提取出图数据
+  plotdata = points
+  FileName <-  paste(betapath,"/a2_",method,"bray.csv", sep = "")
+  write.csv(plotdata,FileName)
+  #---------排序-精修图
+  plotdata = points
+  head(plotdata)
+  # 求均值
+  cent <- aggregate(cbind(x,y) ~Group, data = plotdata, FUN = mean)
+  cent
+  # 合并到样本坐标数据中
+  segs <- merge(plotdata, setNames(cent, c('Group','oNMDS1','oNMDS2')),
+                by = 'Group', sort = FALSE)
+  
+
+  library(ggsci)
+  p3_3 = p3_1 +geom_segment(data = segs,
+                            mapping = aes(xend = oNMDS1, yend = oNMDS2,color = Group),show.legend=F) + # spiders
+    geom_point(mapping = aes(x = x, y = y),data = cent, size = 5,pch = 24,color = "black",fill = "yellow") +
+    scale_fill_manual(values = colset1)+
+    scale_color_manual(values = colset1,guide = F) + 
+    mytheme1 + 
+    theme(legend.position = c(0.2,0.2))
+  p3_3
+  
+  FileName <- paste(betapath,"/a2_",method,"bray_star.pdf", sep = "")
+  ggsave(FileName, p3_3, width = 8, height = 8)
+  FileName1 <- paste(betapath,"/a2_",method,"bray_star.jpg", sep = "")
+  ggsave(FileName1 , p3_3, width = 8, height = 8)
+
+
+# map
+
+#提取总体比较
+TResult = title1
+head(TResult)
+
+
+FileName <- paste(betapath,"Total_anosim.csv", sep = "")
+write.csv(TResult,FileName)
+
+#---普氏分析#------
+
+map = phyloseq::sample_data(ps)
+samegroup = map$Group %>% table() %>% as.data.frame() %>% .$Freq %>% unique() %>% length() == 1
+
+
+method =  "spearman"
+group = "Group"
+ncol = 5
+nrow = 2
+
+  dist <- 
+    ggClusterNet::scale_micro(ps = ps,method = "rela") %>% 
+    ggClusterNet::vegan_otu()%>%
+    vegan::vegdist(method="bray") %>%
+    as.matrix()
+  
+  map = phyloseq::sample_data(ps)
+  gru = map[,group][,1] %>% unlist() %>% as.vector()
+  id = combn(unique(gru),2)
+  
+  R_mantel = c()
+  p_mantel = c()
+  name = c()
+  R_pro <- c()
+  p_pro <- c()
+  plots = list()
+
+  for (i in 1:dim(id)[2]) {
+    
+    id_dist <- row.names(map)[gru == id[1,i]]
+    dist1 = dist[id_dist,id_dist]
+    id_dist <- row.names(map)[gru == id[2,i]]
+    id_dist = id_dist[1:nrow(dist1)]
+    dist2 = dist[id_dist,id_dist]
+    mt <- vegan::mantel(dist1,dist2,method = method)
+    R_mantel[i] = mt$statistic
+    p_mantel[i] = mt$signif
+    
+    name[i] = paste(id[1,i],"_VS_",id[2,i],sep = "")
+    #--p
+    
+    mds.s <- vegan::monoMDS(dist1)
+    mds.r <- vegan::monoMDS(dist2)
+    pro.s.r <- vegan::protest(mds.s,mds.r)
+    
+    R_pro[i] <- pro.s.r$ss
+    p_pro[i] <- pro.s.r$signif
+    
+    Y <- cbind(data.frame(pro.s.r$Yrot), data.frame(pro.s.r$X))
+    X <- data.frame(pro.s.r$rotation)
+    Y$ID <- rownames(Y)
+    
+    
+    
+    p1 <- ggplot(Y) +
+      geom_segment(aes(x = X1, y = X2, xend = (X1 + MDS1)/2, yend = (X2 + MDS2)/2), 
+                   arrow = arrow(length = unit(0, 'cm')),
+                   color = "#B2182B", size = 1) +
+      geom_segment(aes(x = (X1 + MDS1)/2, y = (X2 + MDS2)/2, xend = MDS1, yend = MDS2), 
+                   arrow = arrow(length = unit(0, 'cm')),
+                   color = "#56B4E9", size = 1) +
+      geom_point(aes(X1, X2), fill = "#B2182B", size = 4, shape = 21) +
+      geom_point(aes(MDS1, MDS2), fill = "#56B4E9", size = 4, shape = 21) +
+      labs(title =  paste(id[1,i],"-",id[2,i]," ","Procrustes analysis:\n    M2 = ",
+                                 round(pro.s.r$ss,3),
+                                 ", p-value = ",
+                                 round(pro.s.r$signif,3),
+                                 "\nMantel test:\n    r = ",
+                                 round(R_mantel[i],3),
+                                 ", p-value =, ",
+                                 round(p_mantel[i],3),sep = "") ) + mytheme1
+    p1
+    
+    plots[[i]] = p1
+  }
+  
+  dat = data.frame(name,R_mantel,p_mantel,R_pro,p_pro )
+  pp  = ggpubr::ggarrange(plotlist = plots, common.legend = TRUE, legend="right",ncol = ncol,nrow = nrow)
+
+
+mytheme1 = theme_classic() + theme(
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  legend.position="right",
+  
+  legend.title = element_blank(),
+  legend.background=element_blank(),
+  legend.key=element_blank(),
+  # legend.text= element_text(size=7),
+  # text=element_text(),
+  # axis.text.x=element_text(angle=45,vjust=1, hjust=1)
+  plot.title = element_text(vjust = -8.5,hjust = 0.1),
+  axis.title.y =element_text(size = 15,face = "bold",colour = "black"),
+  axis.title.x =element_text(size = 15,face = "bold",colour = "black"),
+  axis.text = element_text(size = 10,face = "bold"),
+  axis.text.x = element_text(colour = "black",size = 10),
+  axis.text.y = element_text(colour = "black",size = 10),
+  legend.text = element_text(size = 10,face = "bold")
+)
+  #--门特尔检验-普氏分析
+
+    size = combn(unique(phyloseq::sample_data(ps)$Group),2) %>% dim()
+    size
+
+    data <- dat
+    
+    p3_7 <- pp +  mytheme1 
+    p3_7
+    
+    FileName <- paste(betapath,"mantel_pro.csv", sep = "")
+    write.csv(data,FileName)
+    FileName1 <- paste(betapath,"/a2_","Mantel_Pro.pdf", sep = "")
+    ggsave(FileName1 , p3_7, width = size[2] *6, height = 6,limitsize = FALSE)
+    FileName1 <- paste(betapath,"/a2_","Mantel_Pro.jpg", sep = "")
+    ggsave(FileName1 , p3_7, width = size[2] *6, height =6,limitsize = FALSE)
+
+
+```
+
+### Species Taxonomic Tree（物种分类树）
+
+
+```{r}
+library(ggstar)
+# library(ggtreeExtra)
+library(ggtree)
+# library(treeio)
+# library(ggstar)
+library(ggnewscale)
+# #-读取进化树
+# library(patchwork)
+# library(ggClusterNet)
+# library(phyloseq)
+# library(tidyverse)
+#--微生物组进化树功能
+Top_micro = 150
+remove_rankID = function(taxtab){
+  taxtab$Kingdom = gsub("d__","",taxtab$Kingdom)
+  taxtab$Kingdom = gsub("k__","",taxtab$Kingdom)
+  taxtab$Phylum = gsub("p__","",taxtab$Phylum)
+  taxtab$Class = gsub("c__","",taxtab$Class)
+  taxtab$Order = gsub("o__","",taxtab$Order)
+  taxtab$Family = gsub("f__","",taxtab$Family)
+  taxtab$Genus = gsub("g__","",taxtab$Genus)
+  taxtab$Species = gsub("s__","",taxtab$Species)
+  return(taxtab)
+}
+
+  Top = 100
+
+  tax = ps %>% vegan_tax() %>%
+    as.data.frame()
+  head(tax)
+  tax = remove_rankID(tax) %>%as.matrix()
+  tax[is.na(tax)] = "Unknown"
+  tax[tax == " "] = "Unknown"
+  tax_table(ps) = as.matrix(tax)
+  
+  alltax = ps %>%
+    ggClusterNet::filter_OTU_ps(Top) %>%
+    ggClusterNet::vegan_tax() %>%
+    as.data.frame()
+  alltax$OTU = row.names(alltax)
+  
+  head(alltax)
+  
+  trda <- MicrobiotaProcess::convert_to_treedata(alltax)
+  p0 <- ggtree::ggtree(trda, layout="inward_circular", size=0.2, xlim=c(30,NA))
+
+  # p0$data
+  tax = ps %>%
+    ggClusterNet::filter_OTU_ps(Top) %>%
+    ggClusterNet::vegan_tax() %>%
+    as.data.frame()
+  
+  tippoint = data.frame(OTU = row.names(tax),Taxa = tax$Phylum,Level = "Phylum")
+  
+  tippoint$OTU = paste("",tippoint$OTU,sep = "")
+  tippoint$names <- gsub("","",tippoint$OTU)
+  
+  
+  p0_1 <- ggtree::ggtree(trda, layout="circular", size=0.2, xlim=c(30,NA)) %<+% tippoint
+  p0_1
+  p0 <- p0 %<+% tippoint
+  p0
+  a <- tippoint$Taxa %>% unique() %>% length()
+  
+  b = rep(18,a)
+  names(b) = tippoint$Taxa %>% unique()
+  
+  
+  p1 <- p0 +
+    geom_tippoint(
+      mapping=aes(
+        color=Taxa, 
+        shape=Level
+      ),
+      size=1,
+      alpha=0.8
+    ) +
+    scale_color_manual(values=colorRampPalette(RColorBrewer::brewer.pal(9,"Set1"))(a),
+                       guide=guide_legend(
+                         keywidth=0.5,
+                         keyheight=0.5,
+                         order=2,
+                         override.aes=list(shape= b,
+                                           size=2
+                         ),
+                         na.translate=TRUE
+                       )
+    ) +
+    scale_shape_manual(values=c("Phylum"=20, "Class"=18), guide="none" )
+  
+  
+  p1_1 <- p0_1 +
+    geom_tippoint(
+      mapping=aes(
+        color=Taxa, 
+        shape=Level
+      ),
+      size=1,
+      alpha=0.8
+    ) +
+    scale_color_manual(values=colorRampPalette(RColorBrewer::brewer.pal(9,"Set1"))(a),
+                       guide=guide_legend(
+                         keywidth=0.5,
+                         keyheight=0.5,
+                         order=2,
+                         override.aes=list(shape= b,
+                                           size=2
+                         ),
+                         na.translate=TRUE
+                       )
+    ) +
+    scale_shape_manual(values=c("Phylum"=20, "Class"=18), guide="none" )
+  
+  
+  #------对OTU之间的关系进行连线
+  otu = ps %>%
+    ggClusterNet::filter_OTU_ps(Top) %>%
+    ggClusterNet::vegan_otu() %>%
+    t() %>%
+    as.data.frame()
+  head(otu)
+  pssub = ps %>%
+    ggClusterNet::filter_OTU_ps(Top)
+  result = ggClusterNet::corMicro (ps = pssub ,N = 0,r.threshold=0.8,p.threshold=0.05,method = "pearson")
+  #--提取相关矩阵
+  cor = result[[1]]
+  diag(cor) = 0
+  
+  # library(tidyfst)
+  linktab = tidyfst::mat_df(cor) %>% 
+    dplyr::filter(value != 0) %>%
+    dplyr::mutate(direct = ifelse(value> 0, "positive", "nagetive"))
+  colnames(linktab) = c("Inhibitor","Sensitive","Interaction","direct")
+  head(linktab)
+  linktab$Inhibitor = paste("st__",linktab$Inhibitor,sep = "")
+  linktab$Sensitive = paste("st__",linktab$Sensitive,sep = "")
+  head(linktab)
+  
+  # p1$data
+  p2 <- p1 +
+    ggnewscale::new_scale_color() +
+    ggtree::geom_taxalink(
+      data=linktab,
+      mapping=aes(
+        taxa1=Inhibitor, 
+        taxa2=Sensitive, 
+        color=direct
+      ),
+      alpha=0.6,
+      offset=0.1,
+      size=0.15,
+      ncp=10,
+      hratio=1,
+      arrow=grid::arrow(length = unit(0.005, "npc"))
+    ) +
+    scale_colour_manual(values=c("chocolate2", "#3690C0", "#009E73"),
+                        guide=guide_legend(
+                          keywidth=0.8, keyheight=0.5,
+                          order=1, override.aes=list(alpha=1, size=0.5)
+                        )
+    )
+  
+  
+  
+  otu$id = row.names(otu)
+  ringdat = otu %>% tidyfst::longer_dt(id)
+  ringdat$value = log2(ringdat$value+1)
+  ringdat$id = paste("st__",ringdat$id,sep = "")
+  head(ringdat)
+  num <- ringdat$name %>% unique() %>% length()
+  p3 <- p2 +
+    geom_fruit(
+      data=ringdat,
+      geom=geom_star,
+      mapping=aes(
+        y=id, 
+        x=name, 
+        size=value, 
+        fill= name
+      ),
+      starshape = 13,
+      starstroke = 0,
+      offset=-0.9,
+      pwidth=0.8,
+      grid.params=list(linetype=3)
+    ) +
+    scale_size_continuous(range=c(0, 2),
+                          limits=c(sort(ringdat$value)[2], max(ringdat$value)),
+                          breaks=c(1, 2, 3),
+                          name=bquote(paste(Log[2],"(",.("Count+1"), ")")),
+                          guide=guide_legend(keywidth = 0.4, keyheight = 0.4, order=4, 
+                                             override.aes = list(starstroke=0.3))
+    ) +
+    scale_fill_manual(
+      values=colorRampPalette(RColorBrewer::brewer.pal(12,"Spectral"))(num),
+      guide=guide_legend(keywidth = 0.4, keyheight = 0.4, order=3)
+    )
+  
+  
+  p4 <- p3 +
+    geom_tiplab(
+      mapping=aes(
+        label=names
+      ),
+      align=TRUE,
+      size=2,
+      linetype=NA,
+      offset=16
+    )
+  
+  
+  map = phyloseq::sample_data(pssub)
+  
+  dat <- pssub %>%
+    ggClusterNet::vegan_otu() %>%
+    as.data.frame()
+  bartab = cbind(dat,data.frame(row.names = row.names(map),ID = row.names(map),Group = map$Group )) %>%
+    dplyr::group_by(Group) %>%
+    dplyr::summarise_if(is.numeric,mean) %>%
+    as.data.frame()%>% 
+    tidyfst::longer_dt(Group)
+  head(bartab)
+  bartab$name = paste("st__",bartab$name,sep = "")
+  num = bartab$Group %>% unique() %>%
+    length()
+  p5 <- p4 +
+    ggnewscale::new_scale_fill() +
+    geom_fruit(
+      data=bartab,
+      geom=geom_bar,
+      mapping=aes(
+        x=value, 
+        y=name, 
+        fill= Group
+      ),
+      stat="identity",
+      orientation="y",
+      offset=0.48,
+      pwidth=1.5,
+      axis.params=list(
+        axis = "x", 
+        text.angle = -45, 
+        hjust = 0, 
+        vjust = 0.5, 
+        nbreak = 4
+      )
+    ) +
+    scale_fill_manual(
+      name = "Number of interactions",
+      values=colorRampPalette(RColorBrewer::brewer.pal(12,"Set3"))(num),
+      guide=guide_legend(keywidth=0.5,keyheight=0.5,order=5)
+    ) +
+    theme(
+      legend.background=element_rect(fill=NA),
+      legend.title=element_text(size=6.5),
+      legend.text=element_text(size=5),
+      legend.spacing.y = unit(0.02, "cm"),
+      legend.margin=ggplot2::margin(0.1, 0.9, 0.1,-0.9, unit="cm"),
+      legend.box.margin=ggplot2::margin(0.1, 0.9, 0.1, -0.9, unit="cm"),
+      plot.margin = unit(c(-1.2, -1.2, -1.2, 0.1),"cm")
+    )
+  
+  
+  p5_1 <- p1_1 +
+    new_scale_fill() +
+    geom_fruit(
+      data=bartab,
+      geom=geom_bar,
+      mapping=aes(
+        x=value, 
+        y=name, 
+        fill= Group
+      ),
+      stat="identity",
+      orientation="y",
+      offset=0.1,
+      pwidth=1.5,
+      axis.params=list(
+        axis = "x", 
+        text.angle = -45, 
+        hjust = 0, 
+        vjust = 0.5, 
+        nbreak = 4
+      )
+    ) +
+    scale_fill_manual(
+      name = "Number of interactions",
+      values=colorRampPalette(RColorBrewer::brewer.pal(12,"Set3"))(num),
+      guide=guide_legend(keywidth=0.5,keyheight=0.5,order=5)
+    ) +
+    theme(
+      legend.background=element_rect(fill=NA),
+      legend.title=element_text(size=6.5),
+      legend.text=element_text(size=5),
+      legend.spacing.y = unit(0.02, "cm"),
+      legend.margin=ggplot2::margin(0.1, 0.9, 0.1,-0.9, unit="cm"),
+      legend.box.margin=ggplot2::margin(0.1, 0.9, 0.1, -0.9, unit="cm"),
+      plot.margin = unit(c(-1.2, -1.2, -1.2, 0.1),"cm")
+    )
+  
+  
+
+library(ggClusterNet)
+barpath = paste(otupath,"/phy_tree_micro/",sep = "");print(barpath)
+dir.create(barpath)
+
+
+p6 = p1_1
+p7 = p5_1
+
+detach("package:ggstar")
+
+FileName <- paste(barpath,Top_micro,"phy_tree_micro1", ".pdf", sep = "")
+ggsave(FileName, p0, width = 6, height = 6)
+FileName <- paste(barpath,Top_micro,"phy_tree_micro2", ".pdf", sep = "")
+ggsave(FileName, p1, width = 7, height = 7)
+FileName <- paste(barpath,Top_micro,"phy_tree_micro3", ".pdf", sep = "")
+ggsave(FileName, p2, width = 7, height = 7)
+FileName <- paste(barpath,Top_micro,"phy_tree_micro4", ".pdf", sep = "")
+ggsave(FileName, p3, width = 12, height = 12)
+FileName <- paste(barpath,Top_micro,"phy_tree_micro5", ".pdf", sep = "")
+ggsave(FileName, p4, width = 15, height = 15)
+FileName <- paste(barpath,Top_micro,"phy_tree_micro5", ".pdf", sep = "")
+ggsave(FileName, p5, width = 18, height = 18)
+FileName <- paste(barpath,Top_micro,"phy_tree_micro6", ".pdf", sep = "")
+ggsave(FileName, p6, width = 7, height = 7)
+FileName <- paste(barpath,Top_micro,"phy_tree_micro7", ".pdf", sep = "")
+ggsave(FileName, p7, width = 12, height = 12)
+
+# library(cowplot)
+# save_plot(FileName, p2, base_height = 7, base_width =7)
+
+FileName <- paste(barpath,Top_micro,"phy_tree_micro1", ".png", sep = "")
+ggsave(FileName, p0, width = 6, height = 6)
+FileName <- paste(barpath,Top_micro,"phy_tree_micro2", ".png", sep = "")
+ggsave(FileName, p1, width = 7, height = 7)
+FileName <- paste(barpath,Top_micro,"phy_tree_micro3", ".png", sep = "")
+ggsave(FileName, p2, width = 7, height = 7,dpi = 72)
+FileName <- paste(barpath,Top_micro,"phy_tree_micro4", ".png", sep = "")
+ggsave(FileName, p3, width = 12, height = 12,dpi = 72)
+FileName <- paste(barpath,Top_micro,"phy_tree_micro5", ".png", sep = "")
+ggsave(FileName, p4, width = 15, height = 15,dpi = 72)
+FileName <- paste(barpath,Top_micro,"phy_tree_micro5", ".png", sep = "")
+ggsave(FileName, p5, width = 18, height = 18,dpi = 72)
+FileName <- paste(barpath,Top_micro,"phy_tree_micro6", ".png", sep = "")
+ggsave(FileName, p6, width = 7, height = 7,dpi = 72)
+FileName <- paste(barpath,Top_micro,"phy_tree_micro7", ".png", sep = "")
+ggsave(FileName, p7, width = 12, height = 12,dpi = 72)
+
+```
+
+
+### Species composition-chord diagram（物种组成-和弦图）
+
+
+```{r}
+
+Top = 10
+rank = 7
+path = barpath
+
+
+
+ps_rela = phyloseq::transform_sample_counts(ps, function(x) x / sum(x) );ps_rela 
+  
+ps_P <- ps_rela %>%
+    ggClusterNet::tax_glom_wt( rank = rank) 
+ps_P
+  
+otu_P = as.data.frame((ggClusterNet::vegan_otu(ps_P)))
+head(otu_P)
+  tax_P = as.data.frame(ggClusterNet::vegan_tax(ps_P))
+  
+  sub_design <- as.data.frame(phyloseq::sample_data(ps_P))
+  count2 =   otu_P
+  #数据分组
+  iris.split <- split(count2,as.factor(sub_design$Group))
+  #数据分组计算平均值
+  iris.apply <- lapply(iris.split,function(x)colSums(x[]))
+  # 组合结果
+  iris.combine <- do.call(rbind,iris.apply)
+  ven2 = t(iris.combine)
+  # head(ven2)
+  lev = phyloseq::rank.names(ps)[rank]
+ 
+  Taxonomies <- ps %>%
+    ggClusterNet::tax_glom_wt(rank = rank) %>% 
+    phyloseq::transform_sample_counts(function(x) {x/sum(x)} )%>% 
+    phyloseq::psmelt() %>%
+    #filter(Abundance > 0.05) %>%
+    dplyr::arrange( !!sym(lev))
+  iris_groups<- dplyr::group_by(Taxonomies, !!sym(lev))
+  ps0_sum <- dplyr::summarise(iris_groups, mean(Abundance), sd(Abundance))
+  ps0_sum[is.na(ps0_sum)] <- 0
+  head(ps0_sum)
+  colnames(ps0_sum) = c("ID","mean","sd")
+  
+  
+  ps0_sum <- dplyr::arrange(ps0_sum,desc(mean))
+  ps0_sum$mean <- ps0_sum$mean *100
+  ps0_sum <- as.data.frame(ps0_sum)
+  head(ps0_sum)
+  top_P = ps0_sum$ID[1:Top];top_P
+  
+  ### 开始进一步合并过滤
+  otu_P = as.data.frame(t(otu_P))
+  otu_tax = merge(ven2,tax_P,by = "row.names",all = F)
+  dim(otu_tax)
+  otu_tax[,lev] = as.character(otu_tax[,lev])
+  otu_tax[,lev][is.na(otu_tax[,lev])] = "others"
+  
+  i = 1
+  for (i in 1:nrow(otu_tax)) {
+    if(otu_tax[,lev] [i] %in% top_P){otu_tax[,lev] [i] = otu_tax[,lev] [i]}
+    
+    else if(!otu_tax[,lev] [i] %in% top_P){otu_tax[,lev] [i] = "others"}
+    
+  }
+  
+  otu_tax[,lev] = as.factor(otu_tax[,lev])
+  head(otu_tax)
+  
+  otu_mean = otu_tax[as.character(unique(sub_design$Group))]
+  head(otu_mean)
+  row.names(otu_mean) = row.names(otu_tax)
+  iris.split <- split(otu_mean,as.factor(otu_tax[,lev]))
+  #数据分组计算平均值
+  iris.apply <- lapply(iris.split,function(x)colSums(x[]))
+  # 组合结果
+  iris.combine <- do.call(rbind,iris.apply)
+  mer_otu_mean = t(iris.combine)
+  
+  head(mer_otu_mean )
+  
+  mi_sam = RColorBrewer::brewer.pal(9,"Set1")
+  mi_tax = colorRampPalette(RColorBrewer::brewer.pal(9,"Set3"))(length(row.names(mer_otu_mean)))
+  
+  grid.col = NULL
+  #这里设置样品颜色
+  grid.col[as.character(unique(sub_design$Group))] = mi_sam
+  #设置群落中物种水平颜色
+  # grid.col[colnames(mer_otu_mean)] = mi_tax
+  grid.col[row.names(mer_otu_mean)] = mi_tax
+  
+  FileName2 <- paste(path,"/",phyloseq::rank.names(ps)[rank],"_cricle",".pdf", sep = "")
+  pdf(FileName2, width = 12, height = 8)
+  
+  #gap.degree修改间隔，不同小块之间的间隔
+  circlize::circos.par(gap.degree = c(rep(2, nrow(mer_otu_mean)-1), 10, rep(2, ncol(mer_otu_mean)-1), 10),
+             start.degree = 180)
+  circlize::chordDiagram(mer_otu_mean,
+               directional = F,
+               diffHeight = 0.06,
+               grid.col = grid.col, 
+               reduce = 0,
+               transparency = 0.5, 
+               annotationTrack =c("grid", "axis"),
+               preAllocateTracks = 2
+  )
+  
+  circlize::circos.track(track.index = 1, panel.fun = function(x, y) {
+    circlize::circos.text(circlize::CELL_META$xcenter, circlize::CELL_META$ylim[1], circlize::CELL_META$sector.index,
+                facing = "clockwise", niceFacing = TRUE, adj = c(0, 0.5))}, bg.border = NA)# here set bg.border to NA is important
+  circlize::circos.clear()
+  dev.off()
+  
+  grid.col = NULL
+  #这里设置样品颜色
+  grid.col[as.character(unique(sub_design$Group))] = mi_sam
+  #设置群落中物种水平颜色
+  # grid.col[colnames(mer_otu_mean)] = mi_tax
+  grid.col[row.names(mer_otu_mean)] = mi_tax
+  FileName2 <- paste(path,"/",phyloseq::rank.names(ps)[rank],"_cricle",".png", sep = "")
+  png(FileName2, res=150, width = 1000, height = 1008)
+
+  #gap.degree修改间隔，不同小块之间的间隔
+  circlize::circos.par(gap.degree = c(rep(2, nrow(mer_otu_mean)-1), 10, rep(2, ncol(mer_otu_mean)-1), 10),
+             start.degree = 180)
+  circlize::chordDiagram(mer_otu_mean,directional = F,
+               reduce = 0,
+               diffHeight = 0.06,grid.col = grid.col, transparency = 0.5, annotationTrack =c("grid", "axis"),
+               preAllocateTracks = 2
+  )
+  
+  circlize::circos.track(track.index = 1, panel.fun = function(x, y) {
+    circlize::circos.text(circlize::CELL_META$xcenter, circlize::CELL_META$ylim[1], circlize::CELL_META$sector.index,
+                facing = "clockwise", niceFacing = TRUE, adj = c(0, 0.5))}, bg.border = NA) # here set bg.border to NA is important
+  circlize::circos.clear()
+dev.off()
+
+```
+
+
+### Species composition-stack bar diagram（物种组成-堆叠柱状图）
+
+
+```{r}
+library(ggalluvial)
+
+group  = "Group"
+j = "Phylum"
+label = TRUE 
+sd = FALSE
+Top = 10
+tran = TRUE
+
+# axis_order = NA
+
+
+  # psdata = ps %>%
+  #   tax_glom(taxrank = j)
+  psdata <- ggClusterNet::tax_glom_wt(ps = ps,ranks = j)
+  
+  # transform to relative abundance
+  if (tran == TRUE) {
+    psdata = psdata%>%
+      phyloseq::transform_sample_counts(function(x) {x/sum(x)} )
+  }
+  
+  otu = phyloseq::otu_table(psdata)
+  tax = phyloseq::tax_table(psdata)
+  
+  for (i in 1:dim(tax)[1]) {
+    if (row.names(tax)[i] %in% names(sort(rowSums(otu), decreasing = TRUE)[1:Top])) {
+      
+      tax[i,j] =tax[i,j]
+    } else {
+      tax[i,j]= "others"
+    }
+  }
+  phyloseq::tax_table(psdata)= tax
+  
+  Taxonomies <- psdata %>% # Transform to rel. abundance
+    phyloseq::psmelt()
+
+  Taxonomies$Abundance = Taxonomies$Abundance * 100
+  # Taxonomies$Abundance = Taxonomies$Abundance /rep
+  colnames(Taxonomies) <- gsub(j,"aa",colnames(Taxonomies))
+  data = c()
+  i = 2
+  for (i in 1:length(unique(phyloseq::sample_data(ps)$Group))) {
+    a <- as.data.frame(table(phyloseq::sample_data(ps)$Group))[i,1]
+
+    b =  as.data.frame(table(phyloseq::sample_data(ps)$Group))[i,2]
+
+    c <- Taxonomies %>% 
+      dplyr::filter(Group == a)
+    c$Abundance <- c$Abundance/b
+    data = data.frame(Sample =c$Sample,Abundance = c$Abundance,aa =c$aa,Group = c$Group)
+
+    if (i == 1) {
+      table = data
+    }
+    if (i != 1) {
+      table = rbind(table,data)
+    }
+
+  }
+
+  Taxonomies = table
+
+  #按照分组求均值
+
+  by_cyl <- dplyr::group_by(Taxonomies, aa,Group)
+
+  zhnagxu2 = dplyr::summarise(by_cyl, sum(Abundance), sd(Abundance))
+
+  iris_groups<- dplyr::group_by(Taxonomies, aa)
+  cc<- dplyr::summarise(iris_groups, sum(Abundance))
+  head(cc)
+  colnames(cc)= c("aa","allsum")
+  cc<- dplyr::arrange(cc, desc(allsum))
+  
+  ##使用这个属的因子对下面数据进行排序
+  head(zhnagxu2)
+  colnames(zhnagxu2) <- c("aa","group","Abundance","sd")
+  zhnagxu2$aa = factor(zhnagxu2$aa,order = TRUE,levels = cc$aa)
+
+  zhnagxu3 = zhnagxu2
+  
+  ##制作标签坐标，标签位于顶端
+  # Taxonomies_x = ddply(zhnagxu3,"group", summarize, label_y = cumsum(Abundance))
+  # head(Taxonomies_x )
+  #标签位于中部
+  # Taxonomies_x1 = ddply(zhnagxu3,"group", transform, label_y = cumsum(Abundance) - 0.5*Abundance)
+  Taxonomies_x = plyr::ddply(zhnagxu3,"group", summarize,label_sd = cumsum(Abundance),label_y = cumsum(Abundance) - 0.5*Abundance)
+  head( Taxonomies_x )
+  
+  # Taxonomies_x$label_y =
+  Taxonomies_x = cbind(as.data.frame(zhnagxu3),as.data.frame(Taxonomies_x)[,-1])
+
+  Taxonomies_x$label = Taxonomies_x$aa
+  # #使用循环将堆叠柱状图柱子比较窄的别写标签，仅仅宽柱子写上标签
+  # for(i in 1:nrow(Taxonomies_x)){
+  #   if(Taxonomies_x[i,3] > 3){
+  #     Taxonomies_x[i,5] = Taxonomies_x[i,5]
+  #   }else{
+  #     Taxonomies_x[i,5] = NA
+  #   }
+  # }
+
+  Taxonomies_x$aa = factor(Taxonomies_x$aa,order = TRUE,levels = c(as.character(cc$aa)))
+  
+  ##普通柱状图
+  
+  p4 <- ggplot(Taxonomies_x , aes(x =  group, y = Abundance, fill = aa, order = aa)) +
+    geom_bar(stat = "identity",width = 0.5,color = "black") +
+    # scale_fill_manual(values = colors) +
+    theme(axis.title.x = element_blank()) +
+    theme(legend.text=element_text(size=6)) +
+    scale_y_continuous(name = "Relative abundance (%)") +
+    guides(fill = guide_legend(title = j)) +
+    labs(x="",y="Relative abundance (%)",
+         title= "")
+  # paste("Top ",Top," ",j,sep = "")
+  p4
+
+    p4 = p4 + scale_x_discrete(limits = axis_order)
+
+  
+  
+  if (sd == TRUE) {
+    p4 =  p4 +
+      geom_errorbar(aes(ymin=label_sd-sd, ymax=label_sd +sd), width=.2)
+  }
+  
+  if (label == TRUE) {
+    p4 = p4 +
+      geom_text(aes(y = label_y, label = label ))
+  }
+  
+  map = as.data.frame(phyloseq::sample_data(ps))
+  if (length(unique(map$Group))>3){p4 = p4 + theme(axis.text.x=element_text(angle=45,vjust=1, hjust=1))}
+  
+  #-------------冲击图
+  cs = Taxonomies_x $aa
+  
+  lengthfactor <- cs %>%
+    levels() %>%
+    length()
+  cs4 <- cs %>%
+    as.factor() %>%
+    summary()  %>%
+    as.data.frame()
+  cs4$id = row.names(cs4)
+  
+  #对因子进行排序
+  df_arrange<- dplyr::arrange(cs4, id)
+  #对Taxonomies_x 对应的列进行排序
+  Taxonomies_x1<- dplyr::arrange(Taxonomies_x , aa)
+  head(Taxonomies_x1)
+  #构建flow的映射列Taxonomies_x
+  Taxonomies_x1$ID = factor(rep(c(1:lengthfactor), cs4$.))
+  
+  #colour = "black",size = 2,,aes(color = "black",size = 0.8)
+  head(Taxonomies_x1)
+  Taxonomies_x1$Abundance
+  
+  p3 <- ggplot(Taxonomies_x1, aes(x = group, y = Abundance,fill = aa,alluvium = aa,stratum = ID)) +
+    ggalluvial::geom_flow(aes(fill = aa, colour = aa),
+              stat = "alluvium", lode.guidance = "rightleft",
+              color = "black",size = 0.2,width = 0.35,alpha = .2)  +
+    geom_bar(width = 0.45,stat = "identity") +
+    labs(x="",y="Relative abundance (%)",
+         title= "") +
+    guides(fill = guide_legend(title = j),color = FALSE) +
+    scale_y_continuous(expand = c(0,0))
+  p3
+  
+  # flower plot
+  p1 <- ggplot(Taxonomies_x1,
+               aes(x = group, alluvium = aa, y = Abundance)) +
+    ggalluvial::geom_flow(aes(fill = aa, colour = aa), width = 0)  +
+    labs(x="",y="Relative abundance (%)",
+         title="") +
+    guides(fill = guide_legend(title = j),color = FALSE) +
+    scale_y_continuous(expand = c(0,0))
+  
+
+    p1 = p1 + scale_x_discrete(limits = axis_order)
+    p3 = p3 + scale_x_discrete(limits = axis_order)
+    
+  
+  # p3
+  if (label == TRUE) {
+    p1 = p1 +
+      geom_text(aes(y = label_y, label = label ))
+    p3 = p3 +
+      geom_text(aes(y = label_y, label = label ))
+  }
+  
+  if (sd == TRUE) {
+    p1 =  p1 +
+      geom_errorbar(aes(ymin=label_sd-sd, ymax=label_sd +sd), width=.2)
+    p3 =  p3 +
+      geom_errorbar(aes(ymin=label_sd-sd, ymax=label_sd +sd), width=.2)
+  }
+  
+  if (length(unique(map$Group))>3){	p3=p3+theme(axis.text.x=element_text(angle=45,vjust=1, hjust=1))}
+  
+  # return(list(p4,Taxonomies,p3,p1))
+
+
+barpath = paste(otupath,"/Microbial_composition/",sep = "")
+dir.create(barpath)
+
+phyloseq::rank_names(ps)
+
+
+
+  p4_1 <- p4 + 
+    # scale_fill_brewer(palette = "Paired") + 
+    scale_fill_manual(values = colset3) +
+    scale_x_discrete(limits = axis_order) +
+    mytheme1
+  p4_1
+
+  p4_2  <- p3 + 
+    # scale_fill_brewer(palette = "Paired") + 
+    scale_fill_manual(values = colset3) +
+    scale_x_discrete(limits = axis_order) + 
+    mytheme1
+  p4_2
+  
+  databar <- Taxonomies
+  
+  FileName1 <- paste(barpath,"/a2_",j,"_barflow",".pdf", sep = "")
+  ggsave(FileName1, p4_2, width = (5+ gnum), height =8 )
+  FileName2 <- paste(barpath,"/a2_",j,"_barflow",".jpg", sep = "")
+  ggsave(FileName2, p4_2, width = (5+ gnum), height =8 )
+  
+  FileName1 <- paste(barpath,"/a2_",j,"_bar",".pdf", sep = "")
+  ggsave(FileName1, p4_1, width = (5+ gnum), height =8 )
+  FileName2 <- paste(barpath,"/a2_",j,"_bar",".jpg", sep = "")
+  ggsave(FileName2, p4_1, width = (5+ gnum), height =8 )
+  
+  FileName <- paste(barpath,"/a2_",j,"_bar_data",".csv", sep = "")
+  write.csv(databar,FileName)
+
+
+detach("package:ggalluvial")
+
+```
+
+
+### Species composition-circle strack bar diagram（物种组成-环状堆叠柱状图）
+
+```{r}
+# BiocManager::install("ggstance")
+
+ps = readRDS("./data/dataNEW/ps_16s.rds")
+
+library(ggtree)
+
+barpath = paste(otupath,"/circle_Micro_strack_bar/",sep = "");print(barpath)
+dir.create(barpath)
+
+
+Top = 15
+dist = "bray"
+cuttree = 3
+hcluter_method = "complete"
+
+
+  # phyloseq(ps)对象标准化
+  otu = ps %>% 
+    ggClusterNet::scale_micro() %>%
+    ggClusterNet::vegan_otu() %>% t() %>%
+    as.data.frame()
+  # 导出OTU表
+  # otu = as.data.frame(t(vegan_otu(ps1_rela)))
+  
+  #计算距离矩阵
+  unif = phyloseq::distance(ps %>% ggClusterNet::scale_micro() , method = dist)
+  # 聚类树，method默认为complete
+  hc <- stats::hclust(unif, method = hcluter_method )
+  #  take grouping with hcluster tree
+  clus <- cutree(hc, cuttree )
+  
+  d = data.frame(label = names(clus), 
+                 member = factor(clus))
+  # eatract mapping file
+  map = as.data.frame(phyloseq::sample_data(ps))
+  
+  dd = merge(d,map,by = "row.names",all = F)
+  row.names(dd) = dd$Row.names 
+  dd$Row.names = NULL
+  # library(tidyverse)
+  # ggtree绘图 #----
+  p  = ggtree::ggtree(hc, layout='circular') %<+% dd + 
+    geom_tippoint(size=5, shape=21, aes(fill= Group, x=x)) + 
+    geom_tiplab(aes(color = Group,x=x * 1.2), hjust=1,offset=0.3) + xlim(-0.5,NA)
+  p
+  
+  psdata =  ggClusterNet::tax_glom_wt(ps = ps %>% ggClusterNet::scale_micro(),ranks = "Phylum" )
+  # 转化丰度值
+  psdata = psdata%>% phyloseq::transform_sample_counts(function(x) {x/sum(x)} )
+  
+  #--提取otu和物种注释表格
+  otu = phyloseq::otu_table(psdata)
+  tax = phyloseq::tax_table(psdata)
+  head(tax)
+  #--按照指定的Top数量进行筛选与合并
+  j = "Phylum"
+  for (i in 1:dim(tax)[1]) {
+    if (row.names(tax)[i] %in% names(sort(rowSums(otu), decreasing = TRUE)[1:Top])) {
+      tax[i,j] =tax[i,j]
+    } else {
+      tax[i,j]= "Other"
+    }
+  }
+  phyloseq::tax_table(psdata)= tax
+  
+  Taxonomies <- psdata %>% phyloseq::psmelt()
+  
+  Taxonomies$Abundance = Taxonomies$Abundance * 100
+  
+  Taxonomies$OTU = NULL
+  colnames(Taxonomies)[1] = "id"
+  
+  head(Taxonomies)
+  
+  dat2 = data.frame(id = Taxonomies$id,Abundance = Taxonomies$Abundance,Phylum = Taxonomies$Phylum)
+  head(dat2)
+  
+  p2 <- p + 
+    ggnewscale::new_scale_fill() + 
+    ggtreeExtra::geom_fruit(
+      data=dat2,
+      geom=geom_bar,
+      mapping=aes(
+        x=Abundance, 
+        y=id, 
+        fill= Phylum
+      ),
+      stat="identity",
+      width = 0.4,
+      orientation="y",
+      offset=0.9,
+      pwidth=2,
+      axis.params=list(
+        axis = "x", 
+        text.angle = -45, 
+        hjust = 0, 
+        vjust = 0.5, 
+        nbreak = 4
+      )
+    ) +
+    scale_fill_manual(
+      # name = "Number of interactions",
+      values=c(colset3),
+      guide=guide_legend(keywidth=0.5,keyheight=0.5,order=5)
+    ) +theme_void()
+  
+  
+
+FileName2 <- paste(barpath,"/a2_","_bar",".jpg", sep = "")
+ggsave(FileName2, p2, width = 10, height =8 )
+
+FileName2 <- paste(barpath,"/a2_","_bar",".pdf", sep = "")
+ggsave(FileName2, p2, width = 10, height =8 )
+
+#--距离和丰度合并#----
+
+dist = "bray"
+j = "Phylum"# 使用门水平绘制丰度图表
+# rep = 6 # 重复数量是6个
+Top = 10 # 提取丰度前十的物种注释
+tran = TRUE # 转化为相对丰度值
+hcluter_method = "complete"
+Group = "Group"
+cuttree = 3
+  
+
+  # phyloseq(ps)对象标准化
+  ps1_rela = phyloseq::transform_sample_counts(ps, function(x) x / sum(x) )
+  # 导出OTU表
+  otu = as.data.frame(t(ggClusterNet::vegan_otu(ps1_rela)))
+  
+  #计算距离矩阵
+  unif = phyloseq::distance(ps1_rela , method = dist)
+  # 聚类树，method默认为complete
+  hc <- stats::hclust(unif, method = hcluter_method )
+  
+  #  take grouping with hcluster tree
+  clus <- stats::cutree(hc, cuttree )
+  # 提取树中分组的标签和分组编号
+  d = data.frame(label = names(clus), 
+                 member = factor(clus))
+  # eatract mapping file
+  map = as.data.frame(phyloseq::sample_data(ps))
+  # 合并树信息到样本元数据
+  dd = merge(d,map,by = "row.names",all = F)
+  row.names(dd) = dd$Row.names 
+  dd$Row.names = NULL
+  
+  # library(tidyverse)
+  # ggtree绘图 #----
+  p  = ggtree::ggtree(hc) %<+% dd + 
+    geom_tippoint(size=5, shape=21, aes(fill= Group, x=x)) + 
+    geom_tiplab(aes(color = Group,x=x * 1.2), hjust=1)
+  p
+  # 按照分类学门(j)合并
+  psdata =  ggClusterNet::tax_glom_wt(ps = ps1_rela,ranks = j)
+  
+  # 转化丰度值
+  if (tran == TRUE) {
+    psdata = psdata %>% phyloseq::transform_sample_counts(function(x) {x/sum(x)} )
+  }
+  
+  #--提取otu和物种注释表格
+  otu = phyloseq::otu_table(psdata)
+  tax = phyloseq::tax_table(psdata)
+  
+  #--按照指定的Top数量进行筛选与合并
+  for (i in 1:dim(tax)[1]) {
+    if (row.names(tax)[i] %in% names(sort(rowSums(otu), decreasing = TRUE)[1:Top])) {
+      tax[i,j] =tax[i,j]
+    } else {
+      tax[i,j]= "Other"
+    }
+  }
+  phyloseq::tax_table(psdata)= tax
+  
+  ##转化为表格
+  Taxonomies <- psdata %>% 
+    phyloseq::psmelt()
+  head(Taxonomies)
+  Taxonomies$Abundance = Taxonomies$Abundance * 100
+  
+  Taxonomies$OTU = NULL
+  colnames(Taxonomies)[1] = "id"
+  
+  head(Taxonomies)
+  
+  p <- p + ggnewscale::new_scale_fill()
+  p
+  p1 <- facet_plot(p, panel = 'Stacked Barplot', data = Taxonomies, geom = ggstance::geom_barh,mapping = aes(x = Abundance, fill = !!sym(j)),color = "black",stat='identity' )   
+  p1
+  
+  grotax <- Taxonomies %>%
+    dplyr::group_by(Group,!!sym(j)) %>%
+    dplyr::summarise(Abundance = sum(Abundance))
+  head(grotax)
+
+  data = c()
+  i = 2
+  for (i in 1:length(unique(phyloseq::sample_data(psdata)$Group))) {
+    a <- as.data.frame(table(phyloseq::sample_data(psdata)$Group))[i,1]
+    
+    b =  as.data.frame(table(phyloseq::sample_data(psdata)$Group))[i,2]
+    
+    c <- grotax %>% 
+      dplyr::filter(Group == a)
+    c$Abundance <- c$Abundance/b
+    head(c)
+    # data = data.frame(Sample =c$Sample,Abundance = c$Abundance,aa =c$aa,Group = c$Group)
+    data = c
+    if (i == 1) {
+      table = data
+    }
+    if (i != 1) {
+      table = rbind(table,data)
+    }
+    
+  }
+ sum( grotax$Abundance)
+  head(table)
+
+#--绘制分组的聚类结果
+  ps1_rela = phyloseq::transform_sample_counts(ps, function(x) x / sum(x) )
+  #按照分组合并OTU表格
+  
+  otu = as.data.frame((ggClusterNet::vegan_otu(ps1_rela)))
+  
+  iris.split <- split(otu,as.factor(phyloseq::sample_data(ps1_rela)$Group))
+  iris.apply <- lapply(iris.split,function(x)colMeans(x))
+  # 组合结果
+  iris.combine <- do.call(rbind,iris.apply)
+  otuG = t(iris.combine)
+  
+  ps = phyloseq::phyloseq(phyloseq::otu_table(otuG,taxa_are_rows = T),
+                          phyloseq::tax_table(ps1_rela)
+                         
+                          
+  )
+  
+  hc = ps %>%
+    phyloseq::distance(method = dist) %>%
+    stats::hclust( method = hcluter_method )
+  
+  #  take grouping with hcluster tree
+  clus <- cutree(hc, cuttree )
+  # 提取树中分组的标签和分组编号
+  d = data.frame(label = names(clus), 
+                 member = factor(clus))
+  # eatract mapping file
+  
+  map = data.frame(ID = unique(phyloseq::sample_data(ps1_rela)$Group),row.names = unique(phyloseq::sample_data(ps1_rela)$Group),Group = unique(phyloseq::sample_data(ps1_rela)$Group))
+  # 合并树信息到样本元数据
+  dd = merge(d,map,by = "row.names",all = F)
+  row.names(dd) = dd$Row.names
+  dd$Row.names = NULL
+  
+  # ggtree绘图 #----
+  p3  = ggtree(hc) %<+% dd + 
+    geom_tippoint(size=5, shape=21, aes(fill= member, x=x)) + 
+    geom_tiplab(aes(color = member,x=x * 1.2), hjust=1)
+  p3
+  p3 <- p3 + ggnewscale::new_scale_fill()
+  head(grotax)
+  
+  p4 <- facet_plot(p3, panel = 'Stacked Barplot', data = table, geom = ggstance::geom_barh,mapping = aes(x = Abundance, fill = !!sym(j)),color = "black",stat='identity' )   
+  p4
+  
+# return(list(p,p1,p3,p4,Taxonomies))
+
+  p5_1 <- p
+  p5_2 <- p1
+  p5_3 <- p3
+  p5_4 <- p4
+  clubardata <- Taxonomies
+ps = readRDS("./data/dataNEW/ps_16s.rds")
+  
+  FileName1 <- paste(barpath,"/a2_",j,"_cluster_sample",".pdf", sep = "")
+  ggsave(FileName1, p5_1, width = 6, height = dim(phyloseq::sample_data(ps))[1]/4,limitsize = FALSE)
+  FileName1 <- paste(barpath,"/a2_",j,"_cluster_bar_sample",".pdf", sep = "")
+  ggsave(FileName1, p5_2, width = 12, height = dim(phyloseq::sample_data(ps))[1]/4 ,limitsize = FALSE)
+  FileName1 <- paste(barpath,"/a2_",j,"_cluster_sample",".jpg", sep = "")
+  ggsave(FileName1, p5_1, width = 6, height =dim(phyloseq::sample_data(ps))[1]/4 ,limitsize = FALSE)
+  FileName1 <- paste(barpath,"/a2_",j,"_cluster_bar_sample",".jpg", sep = "")
+  ggsave(FileName1, p5_2, width = 12, height =dim(phyloseq::sample_data(ps))[1]/4 ,limitsize = FALSE)
+  
+  FileName1 <- paste(barpath,"/a2_",j,"_cluster_Group",".pdf", sep = "")
+  ggsave(FileName1, p5_3, width = 6, height = gnum,limitsize = FALSE)
+  FileName1 <- paste(barpath,"/a2_",j,"_cluster_bar_Group",".pdf", sep = "")
+  ggsave(FileName1, p5_4, width = 12, height = gnum ,limitsize = FALSE)
+  FileName1 <- paste(barpath,"/a2_",j,"_cluster_Group",".jpg", sep = "")
+  ggsave(FileName1, p5_3, width = 6, height = gnum ,limitsize = FALSE)
+  FileName1 <- paste(barpath,"/a2_",j,"_cluster_bar_Group",".jpg", sep = "")
+  ggsave(FileName1, p5_4, width = 12, height = gnum ,limitsize = FALSE)
+  
+  FileName <- paste(barpath,"/a2_",j,"_cluster_bar_data",".csv", sep = "")
+  write.csv(clubardata,FileName)
+
+```
+
+
+### Ternary diagram（三元图）
+
+```{r}
+
+library(ggtern)
+ternpath = paste(otupath,"/ggtern/",sep = "")
+dir.create(ternpath)
+ps = readRDS("./data/dataNEW/ps_16s.rds")
+ternpath = ternpath
+
+  ps_rela = phyloseq::transform_sample_counts(ps, function(x) x / sum(x) );ps_rela 
+  
+  otu = ggClusterNet::vegan_otu(ps_rela) %>% as.data.frame()
+  
+  #数据分组
+  iris.split <- split(otu,as.factor(as.factor(phyloseq::sample_data(ps)$Group)))
+  #数据分组计算平均值
+  iris.apply <- lapply(iris.split,function(x)colSums(x[]))
+  # 组合结果
+  iris.combine <- do.call(rbind,iris.apply)
+  ven2 = t(iris.combine) %>% as.data.frame()
+  
+  head(ven2)
+  A <- combn(colnames(ven2),3)
+  ven2$mean = rowMeans(ven2)
+  tax = ggClusterNet::vegan_tax(ps)
+  otutax = cbind(ven2,tax)
+  head(otutax)
+  otutax$Phylum[otutax$Phylum == ""] = "Unknown"
+  
+  
+  # i = 1
+
+  for (i in 1:dim(A)[2]) {
+    x = A[1,i]
+    y = A[2,i]
+    z = A[3,i]
+    p <- ggtern::ggtern(data=otutax,aes_string(x = x,y=y,z=z,color = "Phylum",size ="mean" ))+geom_point() + theme_void()
+    p
+    filename = paste(ternpath,"/",paste(x,y,z,sep = "_"),"_OTU.pdf",sep = "")
+    ggsave(filename,p,width = 12,height = 10)
+    
+    filename = paste(ternpath,"/",paste(x,y,z,sep = "_"),"_OTU.png",sep = "")
+    ggsave(filename,p,width = 12,height = 10,dpi = 100)
+    filename = paste(ternpath,"/",paste(x,y,z,sep = "_"),"_OTU.csv",sep = "")
+    write.csv(otutax,filename,quote = FALSE)
+  }
+
+detach("package:ggtern")
+
+```
+
+### Total microbe + Specific microbe (共有微生物+特有微生物)
+
+```{r}
+
+flowpath = paste(otupath,"/flowplot/",sep = "")
+dir.create(flowpath)
+
+
+group="Group"
+#rep=6
+m1=2
+start=1
+a=0.2
+b=1
+lab.leaf=1
+col.cir="yellow"
+a.cir=0.5
+b.cir=0.5
+m1.cir=2
+N=0.5
+
+  
+mapping = as.data.frame(phyloseq::sample_data(ps))
+aa = ggClusterNet::vegan_otu(ps)
+otu_table = as.data.frame(t(aa))
+count = aa
+sub_design <- as.data.frame(phyloseq::sample_data(ps))
+sub_design$SampleType = sub_design$Group
+phyloseq::sample_data(ps ) = sub_design
+count[count > 0] <- 1
+count2 = as.data.frame(count)
+# group
+iris.split <- split(count2,as.factor(sub_design$Group))
+#group mean
+iris.apply <- lapply(iris.split,function(x)colSums(x[]))
+  # conbine result
+  iris.combine <- do.call(rbind,iris.apply)
+  ven2 = t(iris.combine)
+
+  for (i in 1:length(unique(phyloseq::sample_data(ps)$Group))) {
+    aa <- as.data.frame(table(phyloseq::sample_data(ps)$Group))[i,1]
+    bb =  as.data.frame(table(phyloseq::sample_data(ps)$Group))[i,2]
+    ven2[,aa] = ven2[,aa]/bb
+  }
+
+  ven2[ven2 < N]  = 0
+  ven2[ven2 >=N]  = 1
+  ven2 = as.data.frame(ven2)
+  ven3 = as.list(ven2)
+  ven2 = as.data.frame(ven2)
+  all_num = dim(ven2[rowSums(ven2) == length(levels(sub_design$Group)),])[1]
+  ven2[,1] == 1
+  A = rep("A",length(colnames(ven2)))
+  B = rep(1,length(colnames(ven2)))
+  i = 1
+  for (i in 1:length(colnames(ven2))) {
+    B[i] = length(ven2[rowSums(ven2) == 1,][,i][ven2[rowSums(ven2) == 1,][,i] == 1])
+    A[i] = colnames(ven2)[i]
+  }
+  n   <- length(A)
+  deg <- 360 / n
+  t = 1:n
+  print(deg)
+  
+  p <- ggplot() +
+    # geom_point(aes(x = 5 + cos((start + deg * (t - 1)) * pi / 180) * lab.leaf, y = 5 + sin((start + deg * (t - 1)) * pi / 180) *lab.leaf)) +
+    ggforce::geom_ellipse(aes(x0 = 5 + cos((start + deg * (t - 1)) * pi / 180),
+                     y0 = 5 + sin((start + deg * (t - 1)) * pi / 180),
+                     a = a,
+                     b = b,
+                     angle = (n/2 +seq(0,1000,2)[1:n])/n * pi,
+                     m1 = m1,
+                     fill = as.factor(1:n)),show.legend = F) +
+    ggforce::geom_ellipse(aes(x0 = 5,y0 = 5,a = a.cir,b = b.cir,angle = 0,m1 = m1.cir),fill = col.cir) +
+    geom_text(aes(x = 5,y = 5,label = paste("OVER :",all_num,sep = ""))) +
+    geom_text(aes(
+      x = 5 + cos((start + deg * (t - 1)) * pi / 180) * lab.leaf,
+      y = 5 + sin((start + deg * (t - 1)) * pi / 180) * lab.leaf,
+      label = paste(A,":",B,sep = "")),angle = 360/n*((1:n)-1)  ) +
+    coord_fixed() + theme_void()
+
+
+
+
+p0_2 = p
+
+FileName1 <- paste(flowpath,"ggflowerGroup.pdf", sep = "")
+ggsave(FileName1, p0_2, width = 14, height = 14)
+FileName2 <- paste(flowpath,"ggflowerGroup.jpg", sep = "")
+ggsave(FileName2, p0_2, width = 14, height = 14 )
+
+```
+
+
+### Venn diagram（维恩图）
+
+```{r}
+  Venpath = paste(otupath,"/Ven_Upset_super/",sep = "")
+  dir.create(Venpath)
+
+group = "Group"
+path = path
+N = 0.5
+
+  
+  aa =  ggClusterNet::vegan_otu(ps)
+  otu_table = as.data.frame(t(aa))
+  count = aa
+  countA = count
+  
+  sub_design <- as.data.frame(phyloseq::sample_data(ps))
+  
+
+  #
+  # pick_val_num <- rep/2
+  count[count > 0] <- 1
+  count2 = as.data.frame(count )
+  aa = sub_design[,"Group"]
+  colnames(aa) = "Vengroup"
+  
+  #-div group
+  iris.split <- split(count2,as.factor(aa$Vengroup))
+  #数据分组计算平均值
+  iris.apply <- lapply(iris.split,function(x)colSums(x[]))
+  # 组合结果
+  iris.combine <- do.call(rbind,iris.apply)
+  ven2 = t(iris.combine)
+  for (i in 1:length(unique(phyloseq::sample_data(ps)[,"Group"]))) {
+    aa <- as.data.frame(table(phyloseq::sample_data(ps)[,"Group"]))[i,1]
+    bb =  as.data.frame(table(phyloseq::sample_data(ps)[,"Group"]))[i,2]
+    ven2[,aa] = ven2[,aa]/bb
+  }
+  ven2[ven2 < N]  = 0
+  ven2[ven2 >=N]  = 1
+  ven2 = as.data.frame(ven2)
+  #
+  ven3 = as.list(ven2)
+  
+  # ven_pick = get.venn.partitions(ven3)
+  
+  for (i in 1:ncol(ven2)) {
+    
+    
+    ven3[[i]] <-  row.names(ven2[ven2[i] == 1,])
+    
+  }
+  
+  
+  if (length(names(ven3)) == 2) {
+    filename3 = paste(path,"ven_",paste(names(ven3),sep = "",collapse="-"),".pdf",sep = "",collapse="_")
+    pdf(file=filename3,width = 12, height = 8)
+    a<- VennDiagram::venn.diagram(ven3,
+                    filename=NULL,
+                    lwd=2,#圈线粗度
+                    lty=1, #圈线类型
+                    fill=c('red',"blue"), #填充颜色
+                    col=c('red',"blue"), #圈线颜色
+                    cat.col=c('red',"blue"),#A和B的颜色
+                    cat.cex = 4,# A和B的大小
+                    rotation.degree = 0,#旋转角度
+                    main = "",#主标题内容
+                    main.cex = 2,#主标题大小
+                    sub = "",#亚标题内容
+                    sub.cex = 1,#亚标题字大小
+                    cex=3,#里面交集字的大小
+                    alpha = 0.5,#透明度
+                    reverse=TRUE,
+                    scaled     = FALSE)
+    grid.draw(a)
+    dev.off()
+    filename33 = paste(path,"ven",".jpg",sep = "",collapse="_")
+    jpeg(file=filename33)
+    grid.draw(a)
+    dev.off();
+    
+    
+    
+    
+    
+  } else if (length(names(ven3)) == 3) {
+    filename3 = paste(path,"ven_",paste(names(ven3),sep = "",collapse="-"),".pdf",sep = "",collapse="_")
+    pdf(file=filename3,width = 18, height = 15)
+    a<- VennDiagram::venn.diagram(ven3,
+                    filename=NULL,
+                    lwd=2,#圈线粗度
+                    lty=1, #圈线类型
+                    fill=c('red',"blue","yellow"), #填充颜色
+                    col=c('red',"blue","yellow"), #圈线颜色
+                    cat.col=c('red',"blue","yellow"),#A和B的颜色
+                    cat.cex = 4,# A和B的大小
+                    rotation.degree = 0,#旋转角度
+                    main = "",#主标题内容
+                    main.cex = 2,#主标题大小
+                    sub = "",#亚标题内容
+                    sub.cex = 1,#亚标题字大小
+                    cex=3,#里面交集字的大小
+                    alpha = 0.5,#透明度
+                    reverse=TRUE,
+                    scaled     = FALSE)
+    grid::grid.draw(a)
+    dev.off()
+    filename33 = paste(path,"ven",".jpg",sep = "",collapse="_")
+    jpeg(file=filename33)
+    grid::grid.draw(a)
+    dev.off()
+    grid::grid.draw(a)
+  } else if (length(names(ven3)) == 4) {
+    filename3 = paste(path,"ven_",paste(names(ven3),sep = "",collapse="-"),".pdf",sep = "",collapse="_")
+    pdf(file=filename3,width = 18, height = 15)
+    a<-VennDiagram::venn.diagram(ven3,
+                    filename=NULL,
+                    lwd=2,#圈线粗度
+                    lty=1, #圈线类型
+                    fill=c('red',"blue","yellow","#7ad2f6"), #填充颜色
+                    col=c('red',"blue","yellow","#7ad2f6"), #圈线颜色
+                    cat.col=c('red',"blue","yellow","#7ad2f6"),#A和B的颜色
+                    cat.cex = 4,# A和B的大小
+                    rotation.degree = 0,#旋转角度
+                    main = "",#主标题内容
+                    main.cex = 2,#主标题大小
+                    sub = "",#亚标题内容
+                    sub.cex = 1,#亚标题字大小
+                    cex=3,#里面交集字的大小
+                    alpha = 0.5,#透明度
+                    reverse=TRUE,
+                    scaled     = FALSE)
+    grid::grid.draw(a)
+    dev.off()
+    filename33 = paste(path,"ven",".jpg",sep = "",collapse="_")
+    jpeg(file=filename33)
+    grid::grid.draw(a)
+    dev.off()
+    grid::grid.draw(a)
+  }else if (length(names(ven3)) == 5) {
+    filename3 = paste(path,"ven_",paste(names(ven3),sep = "",collapse="-"),".pdf",sep = "",collapse="_")
+    pdf(file=filename3,width = 12, height = 12)
+    a<- VennDiagram::venn.diagram(ven3,
+                    filename=NULL,
+                    lwd=2,#圈线粗度
+                    lty=1, #圈线类型
+                    fill=c('red',"blue","yellow","#7ad2f6","green"), #填充颜色
+                    col=c('red',"blue","yellow","#7ad2f6","green"), #圈线颜色
+                    cat.col=c('red',"blue","yellow","#7ad2f6","green"),#A和B的颜色
+                    cat.cex = 4,# A和B的大小
+                    rotation.degree = 0,#旋转角度
+                    main = "",#主标题内容
+                    main.cex = 2,#主标题大小
+                    sub = "",#亚标题内容
+                    sub.cex = 1,#亚标题字大小
+                    cex=3,#里面交集字的大小
+                    alpha = 0.5,#透明度
+                    reverse=TRUE,
+                    scaled     = FALSE)
+    grid::grid.draw(a)
+    dev.off()
+    filename33 = paste(path,"ven",".jpg",sep = "",collapse="_")
+    jpeg(file=filename33)
+    grid::grid.draw(a)
+    dev.off()
+    grid::grid.draw(a)
+  }else if (length(names(ven3)) == 6) {
+    
+    print("ven not use for more than 6")
+  }
+  
+
+```
+
+### Venn-network diagram（维恩网络图）
+
+```{r}
+
+library(ggClusterNet)
+library(phyloseq)
+biospath = paste(otupath,"/biospr_network_Ven/",sep = "")
+dir.create(biospath)
+N = 0.5
+result = ggClusterNet::div_network(ps)
+edge = result[[1]]
+data = result[[3]]
+
+
+result <- ggClusterNet::div_culculate(table = result[[3]],distance = 1.1,distance2 = 1.5,distance3 = 1.3,order = FALSE)
+# result <- div_culculate(table = result[[3]],distance = 1,distance2 = 1.2,distance3 = 1.1,order = FALSE)
+edge = result[[1]]
+
+plotdata = result[[2]]
+
+#--这部分数据是样本点数据
+groupdata <- result[[3]]
+# table(plotdata$elements)
+node =  plotdata[plotdata$elements == unique(plotdata$elements), ]
+
+otu_table = as.data.frame(t(ggClusterNet::vegan_otu(ps)))
+tax_table = as.data.frame(ggClusterNet::vegan_tax(ps))
+res = merge(node,tax_table,by = "row.names",all = F)
+row.names(res) = res$Row.names
+res$Row.names = NULL
+plotcord = res
+
+xx = data.frame(mean  =rowMeans(otu_table))
+
+plotcord = merge(plotcord,xx,by = "row.names",all = FALSE)
+head(plotcord)
+# plotcord$Phylum
+row.names(plotcord) = plotcord$Row.names
+plotcord$Row.names = NULL
+head(plotcord)
+library(ggrepel)
+head(plotcord)
+head(groupdata)
+p = ggplot() + geom_segment(aes(x = X1, y = Y1, xend = X2, yend = Y2),
+                            data = edge, size = 0.3,color = "yellow") +
+  geom_point(aes(X1, X2,fill = Phylum,size =mean ),pch = 21, data = plotcord) +
+  geom_point(aes(X1, X2),pch = 21, data = groupdata,size = 5,fill = "blue",color = "black") +
+  geom_text(aes(X1, X2,label = elements ), data = groupdata,hjust = 1,vjust = -1) +
+  theme_void()
+
+p
+
+filename = paste(biospath,"/","biostr_Ven_network.pdf",sep = "")
+ggsave(filename,p,width = (15),height = (12))
+filename = paste(biospath,"/","biostr_Ven_network.jpg",sep = "")
+ggsave(filename,p,width = (15),height = (12))
+
+detach("package:ggClusterNet")
+detach("package:phyloseq")
+
+```
+
+### Sankey diagram（桑基图）
+
+
+```{r}
+# BiocManager::install("networkD3")
+# BiocManager::install("webshot")
+
+library(ggClusterNet)
+library(phyloseq)
+snapath =  paste(otupath,"/sankeyNetwork/",sep = "");otupath
+dir.create(snapath)
+
+ps = readRDS("./data/dataNEW/ps_16s.rds")
+
+rank=6#参数目前不可修改
+Top=50
+snapath=snapath
+
+map = sample_data(ps) %>% as.tibble()
+otu =  ps %>% vegan_otu() %>% 
+  as.data.frame()
+  otu$ID = row.names(otu)
+  
+  tax = ps %>% 
+    scale_micro() %>%
+    vegan_tax() %>% 
+    as.data.frame()
+  tax$taxid = row.names(tax)
+  head(tax)
+  
+
+  data = map %>% as.tibble() %>%
+    inner_join(otu) %>% 
+    gather( taxa, count, starts_with("ASV_")) %>%
+    inner_join(tax,by = c("taxa" = "taxid") )
+  data
+  
+  
+  tax = ps %>% 
+    ggClusterNet::tax_glom_wt(ranks = rank) %>%
+    ggClusterNet::filter_OTU_ps(Top) %>%
+    subset_taxa(!Genus  %in% c("Unassigned","Unknown")) %>%
+    ggClusterNet::vegan_tax() %>%
+    as.data.frame()
+  head(tax)
+  dim(tax)
+  id2 = c("k","p","c","o","f","g")
+  dat = NULL
+  for (i in 1:5) {
+    dat <- tax[,c(i,i+1)] %>% distinct(.keep_all = TRUE) 
+    colnames(dat) = c("source","target")
+    dat$source = paste(id2[i],dat$source,sep = "_")
+    dat$target = paste(id2[i+1],dat$target,sep = "_")
+    if (i == 1) {
+      dat2 = dat
+    }  
+    
+    dat2 = rbind(dat2,dat)
+    
+  }
+  dim(dat2)
+  # dat2 = dat2 %>% distinct(.keep_all = TRUE) 
+  
+  head(dat2)
+  
+  otu = ps %>% 
+    ggClusterNet::tax_glom_wt(ranks = 6) %>%
+    ggClusterNet::scale_micro() %>%
+    ggClusterNet::filter_OTU_ps(Top) %>%
+    subset_taxa(!Genus  %in% c("Unassigned","Unknown")) %>%
+    ggClusterNet::vegan_otu() %>%
+    t() %>%
+    as.data.frame()
+  
+  head(otu)
+  otutax = cbind(otu,tax)
+  
+  id = rank.names(ps)[1:6]
+  dat = NULL
+  dat3 = NULL
+  head(data)
+  
+  for (j in 1) {
+    dat = data %>% group_by(Group,!!sym(rank_names(ps)[j])) %>%
+      summarise_if(is.numeric,sum,na.rm = TRUE)
+    colnames(dat) = c("source","target","value")
+    dat$target = paste(id2[j],dat$target,sep = "_")
+    
+    if (j == 1) {
+      dat3 = dat
+    }  
+    # dat3 = rbind(dat3,dat)
+  }
+  
+  
+  dat3 %>% tail()
+  tem = data.frame(target = dat3$target,value = dat3$value)
+  dat3$value = NULL
+  dat2 = rbind(dat2,dat3)
+  
+  
+  head( otutax)
+  for (i in 1:6) {
+    dat <- otutax %>%
+      dplyr::group_by(!!sym(id[i])) %>%
+      summarise_if(is.numeric,sum,na.rm = TRUE)
+    
+    dat = data.frame(Genus = dat[,1],value =rowSums(dat[,-1]) )
+    colnames(dat) = c("target","value")
+    dat$target = paste(id2[i],dat$target,sep = "_")
+    if (i == 1) {
+      dat3 = dat
+    }  
+    
+    dat3 = rbind(dat3,dat)
+  }
+  
+  dat4 <- dat2 %>% left_join(dat3)
+  sankey = dat4
+  
+  head( sankey )
+  
+  
+  nodes <- data.frame(name = unique(c(as.character(sankey$source),as.character(sankey$target))),stringsAsFactors = FALSE)
+  nodes$ID <- 0:(nrow(nodes)-1)
+  sankey <- merge(sankey,nodes,by.x = "source",by.y = "name")
+  sankey <- merge(sankey,nodes,by.x = "target",by.y = "name")
+  colnames(sankey) <- c("X","Y","value","source","target")
+  sankey <- subset(sankey,select = c("source","target","value"))
+  nodes <- subset(nodes,select = c("name"))
+  
+  ColourScal='d3.scaleOrdinal() .range(["#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#999999"])'
+  
+  sankey$energy_type <- sub(' .*', '', nodes[sankey$source + 1, 'name'])
+  library(networkD3)
+  p <- sankeyNetwork(Links = sankey, Nodes = nodes,
+                     Source = "source",Target = "target",Value = "value",
+                     NodeID = "name",
+                     sinksRight=FALSE,
+                     LinkGroup = 'energy_type',
+                     colourScale= ColourScal, 
+                     # nodeWidth=40,
+                     # fontSize=13
+                     # nodePadding=20
+  )
+
+# return(list(p,sankey))
+
+dat = sankey
+
+FileName <-paste(snapath,"/sankey_Group.csv", sep = "")
+write.csv(dat,FileName,sep = "")
+
+saveNetwork(p,paste(snapath,"/sankey_Group.html", sep = ""))
+library(webshot)
+# webshot::install_phantomjs()
+# webshot(paste(snapath,"/sankey1.html", sep = "") ,paste(snapath,"/sankey1.png", sep = ""))
+webshot(paste(snapath,"/sankey_Group.html", sep = "") , paste(snapath,"/sankey_Group.pdf", sep = ""))
+
+
+```
+
+
+## 2.Difference analysis (2.差异分析)
+
+
+### edgeR and DESep2-Volcano plot（edgeR和DESep2-火山图）
+
+```{r}
+
+ps = readRDS("./data/dataNEW/ps_16s.rds")
+
+diffpath = paste(otupath,"/diff_tax/",sep = "")
+dir.create(diffpath)
+
+diffpath.1 = paste(diffpath,"/DEsep2/",sep = "")
+dir.create(diffpath.1)
+
+diffpath.2 = diffpath.1
+# 准备脚本
+group  = "Group"
+pvalue = 0.05
+lfc =0
+artGroup = NULL
+method = "TMM"
+j = 2
+path = diffpath
+b = NULL
+
+
+  if (j %in% c("OTU","gene","meta")) {
+    ps = ps 
+  } else if (j %in% c(1:7)) {
+    ps = ps %>% 
+      ggClusterNet::tax_glom_wt(ranks = j)
+  } else if (j %in% c("Kingdom","Phylum","Class","Order","Family","Genus","Species")){
+    
+  } else {
+    ps = ps
+    print("unknown j, checked please")
+  }
+  sub_design <- as.data.frame(phyloseq::sample_data(ps))
+
+  Desep_group <- as.character(levels(as.factor(sub_design$Group)))
+  Desep_group
+  
+  if ( is.null(artGroup)) {
+    #--构造两两组合#-----
+    aaa = combn(Desep_group,2)
+    # sub_design <- as.data.frame(sample_data(ps))
+  }
+  if (!is.null(artGroup)) {
+    aaa  = as.matrix(b)
+  }
+  otu_table = as.data.frame(ggClusterNet::vegan_otu(ps))
+  count = as.matrix(otu_table)
+  count <- t(count)
+  sub_design <- as.data.frame(phyloseq::sample_data(ps))
+  dim(sub_design)
+  sub_design$SampleType = as.character(sub_design$Group)
+  sub_design$SampleType <- as.factor(sub_design$Group)
+  # create DGE list
+  d = edgeR::DGEList(counts=count, group=sub_design$SampleType)
+  d$samples
+  d = edgeR::calcNormFactors(d,method=method)#默认为TMM标准化
+
+  # Building experiment matrix
+  design.mat = model.matrix(~ 0 + d$samples$group)
+  colnames(design.mat)=levels(sub_design$SampleType)
+  d2 = edgeR::estimateGLMCommonDisp(d, design.mat)
+  d2 = edgeR::estimateGLMTagwiseDisp(d2, design.mat)
+  fit = edgeR::glmFit(d2, design.mat)
+
+  #------------根据分组提取需要的差异结果#------------
+  for (i in 1:dim(aaa)[2]) {
+    # i = 1
+    Desep_group = aaa[,i]
+    print( Desep_group)
+
+
+    # head(design)
+    # 设置比较组写在前面的分组为enrich表明第一个分组含量高
+# ?limma::makeContrasts
+    group = paste(Desep_group[1],Desep_group[2],sep = "-")
+    group
+    BvsA <- limma::makeContrasts(contrasts =  group,levels=c( as.character(levels(as.factor(sub_design$Group)))) )#注意是以GF1为对照做的比较
+    # 组间比较,统计Fold change, Pvalue
+    lrt = edgeR::glmLRT(fit,contrast=BvsA)
+
+    # FDR检验，控制假阳性率小于5%
+    de_lrt = edgeR::decideTestsDGE(lrt, adjust.method="fdr", p.value=pvalue,lfc=lfc)#lfc=0这个是默认值
+    summary(de_lrt)
+    # 导出计算结果
+    x=lrt$table
+    x$sig=de_lrt
+    head(x)
+    #------差异结果符合otu表格的顺序
+    row.names(count)[1:6]
+
+    x <- cbind(x, padj = p.adjust(x$PValue, method = "fdr"))
+    enriched = row.names(subset(x,sig==1))
+    depleted = row.names(subset(x,sig==-1))
+
+    x$level = as.factor(ifelse(as.vector(x$sig) ==1, "enriched",ifelse(as.vector(x$sig)==-1, "depleted","nosig")))
+    x = data.frame(row.names = row.names(x),logFC = x$logFC,level = x$level,p = x$PValue)
+    head(x)
+    # colnames(x) = paste(group,colnames(x),sep = "")
+    # x = res
+    # head(x)
+    #------差异结果符合otu表格的顺序
+    # x = data.frame(row.names = row.names(x),logFC = x$log2FoldChange,level = x$level,p = x$pvalue) 
+    x1 = x %>%
+      dplyr::filter(level %in% c("enriched","depleted","nosig") )
+    head(x1)
+    x1$Genus = row.names(x1)
+    # x$level = factor(x$level,levels = c("enriched","depleted","nosig"))
+    if (nrow(x1)<= 1) {
+      
+    }
+    x2 <- x1 %>% 
+      dplyr::mutate(ord = logFC^2) %>%
+      dplyr::filter(level != "nosig") %>%
+      dplyr::arrange(desc(ord)) %>%
+      head(n = 5)
+    
+    file = paste(path,"/",group,j,"_","Edger_Volcano_Top5.csv",sep = "")
+    write.csv(x2,file,quote = F)
+    head(x2)
+    
+    p <- ggplot(x1,aes(x =logFC ,y = -log2(p), colour=level)) +
+      geom_point() +
+      geom_hline(yintercept=-log10(0.2),
+                 linetype=4,
+                 color = 'black',
+                 size = 0.5) +
+      geom_vline(xintercept=c(-1,1),
+                 linetype=3,
+                 color = 'black',
+                 size = 0.5) +
+      ggrepel::geom_text_repel(data=x2, aes(x =logFC ,y = -log2(p), label=Genus), size=1) +
+      scale_color_manual(values = c('blue2','red2', 'gray30')) + 
+      ggtitle(group) + theme_bw()
+    
+    p
+    
+    file = paste(path,"/",group,j,"_","Edger_Volcano.pdf",sep = "")
+    ggsave(file,p,width = 8,height = 6)
+    
+    file = paste(path,"/",group,j,"_","Edger_Volcano.png",sep = "")
+    ggsave(file,p,width = 8,height = 6)
+    
+    
+    colnames(x) = paste(group,colnames(x),sep = "")
+    
+    
+
+    if (i ==1) {
+      table =x
+    }
+    if (i != 1) {
+      table = cbind(table,x)
+    }
+  }
+
+  x = table
+
+  ###########添加物种丰度#----------
+  # dim(count)
+  # str(count)
+  count = as.matrix(count)
+  norm = t(t(count)/colSums(count)) #* 100 # normalization to total 100
+  dim(norm)
+  norm1 = norm %>%
+    t() %>% as.data.frame()
+  # head(norm1)
+  #数据分组计算平均值
+  library("tidyverse")
+  head(norm1)
+
+  iris.split <- split(norm1,as.factor(sub_design$SampleType))
+  iris.apply <- lapply(iris.split,function(x)colMeans(x))
+  # 组合结果
+  iris.combine <- do.call(rbind,iris.apply)
+  norm2= t(iris.combine)
+
+  #head(norm)
+  str(norm2)
+  norm2 = as.data.frame(norm2)
+  # dim(x)
+  head(norm2)
+  x = cbind(x,norm2)
+  head(x)
+  #在加入这个文件taxonomy时，去除后面两列不相干的列
+  # 读取taxonomy，并添加各列名称
+
+  if (!is.null(ps@tax_table)) {
+    taxonomy = as.data.frame(ggClusterNet::vegan_tax(ps))
+    head(taxonomy)
+    # taxonomy <- as.data.frame(tax_table(ps1))
+
+    #发现这个注释文件并不适用于直接作图。
+    #采用excel将其分列处理，并且删去最后一列，才可以运行
+    if (length(colnames(taxonomy)) == 6) {
+      colnames(taxonomy) = c("kingdom","phylum","class","order","family","genus")
+    }else if (length(colnames(taxonomy)) == 7) {
+      colnames(taxonomy) = c("kingdom","phylum","class","order","family","genus","species")
+    }else if (length(colnames(taxonomy)) == 8) {
+      colnames(taxonomy) = c("kingdom","phylum","class","order","family","genus","species","rep")
+    }
+    # colnames(taxonomy) = c("kingdom","phylum","class","order","family","genus")
+
+    # Taxonomy排序，并筛选OTU表中存在的
+    library(dplyr)
+    taxonomy$id=rownames(taxonomy)
+    # head(taxonomy)
+    tax = taxonomy[row.names(x),]
+    x = x[rownames(tax), ] # reorder according to tax
+
+    if (length(colnames(taxonomy)) == 7) {
+      x = x[rownames(tax), ] # reorder according to tax
+      x$phylum = gsub("","",tax$phylum,perl=TRUE)
+      x$class = gsub("","",tax$class,perl=TRUE)
+      x$order = gsub("","",tax$order,perl=TRUE)
+      x$family = gsub("","",tax$family,perl=TRUE)
+      x$genus = gsub("","",tax$genus,perl=TRUE)
+      # x$species = gsub("","",tax$species,perl=TRUE)
+    }else if (length(colnames(taxonomy)) == 8) {
+      x$phylum = gsub("","",tax$phylum,perl=TRUE)
+      x$class = gsub("","",tax$class,perl=TRUE)
+      x$order = gsub("","",tax$order,perl=TRUE)
+      x$family = gsub("","",tax$family,perl=TRUE)
+      x$genus = gsub("","",tax$genus,perl=TRUE)
+      x$species = gsub("","",tax$species,perl=TRUE)
+    }else if (length(colnames(taxonomy)) == 9) {
+      x = x[rownames(tax), ] # reorder according to tax
+      x$phylum = gsub("","",tax$phylum,perl=TRUE)
+      x$class = gsub("","",tax$class,perl=TRUE)
+      x$order = gsub("","",tax$order,perl=TRUE)
+      x$family = gsub("","",tax$family,perl=TRUE)
+      x$genus = gsub("","",tax$genus,perl=TRUE)
+      x$species = gsub("","",tax$species,perl=TRUE)
+
+
+    }
+
+  } else {
+    x = cbind(x,tax)
+  }
+
+
+res = x
+head(res) 
+filename = paste(diffpath.2,"/","_",j,"_","edger_all.csv",sep = "")
+write.csv(res,filename)
+
+
+
+
+                        j = "Genus"
+                        group  = "Group"
+                        pvalue = 0.05
+                        artGroup = NULL
+                        path = diffpath
+
+  
+
+  # ps = ps %>% 
+  #   ggClusterNet::tax_glom_wt(ranks = j)
+  if (j %in% c("OTU","gene","meta")) {
+    ps = ps 
+  } else if (j %in% c(1:7)) {
+    ps = ps %>% 
+      ggClusterNet::tax_glom_wt(ranks = j)
+  } else if (j %in% c("Kingdom","Phylum","Class","Order","Family","Genus","Species")){
+    
+  } else {
+    ps = ps
+    print("unknown j, checked please")
+  }
+  
+  
+  Desep_group <- ps %>% 
+    phyloseq::sample_data() %>%
+    .$Group %>%
+    as.factor() %>%
+    levels() %>%
+    as.character()
+  
+  if ( is.null(artGroup)) {
+    #--构造两两组合#-----
+    aaa = combn(Desep_group,2)
+    # sub_design <- as.data.frame(sample_data(ps))
+  } else if (!is.null(artGroup)) {
+    aaa  = as.matrix(b )
+  }
+  
+  count <-  ps %>% 
+    ggClusterNet::vegan_otu() %>% round(0) %>%
+    t() 
+  
+  
+  map = ps %>% 
+    phyloseq::sample_data() %>%
+    as.tibble() %>%
+    as.data.frame()
+  
+  
+  dds <- DESeq2::DESeqDataSetFromMatrix(countData = count,
+                                colData = map,
+                                design = ~ Group)
+  
+  dds2 <- DESeq2::DESeq(dds)  ##第二步,标准化
+  # resultsNames(dds2)
+  
+  
+  #------------根据分组提取需要的差异结果#------------
+  for (i in 1:dim(aaa)[2]) {
+    # i = 1
+    Desep_group = aaa[,i]
+    print( Desep_group)
+    
+    
+    # head(design)
+    # 设置比较组写在前面的分组为enrich表明第一个分组含量高
+    
+    group = paste(Desep_group[1],Desep_group[2],sep = "-")
+    group
+    
+    # 将结果用results()函数来获取，赋值给res变量
+    res <-  DESeq2::results(dds2, contrast=c("Group",Desep_group ),alpha=0.05)
+    # 导出计算结果
+    
+    x = res
+    head(x)
+    #------差异结果符合otu表格的顺序
+    
+    x$level = as.factor(ifelse(as.vector(x$padj) < 0.05 & x$log2FoldChange > 0, "enriched",
+                               ifelse(as.vector(x$padj) < 0.05 &x$log2FoldChange < 0, "depleted","nosig")))
+    
+    
+    x = data.frame(row.names = row.names(x),logFC = x$log2FoldChange,level = x$level,p = x$pvalue) 
+    x1 = x %>%
+      filter(level %in% c("enriched","depleted","nosig") )
+    head(x1)
+    x1$Genus = row.names(x1)
+    # x$level = factor(x$level,levels = c("enriched","depleted","nosig"))
+    
+    x2 <- x1 %>% 
+      dplyr::mutate(ord = logFC^2) %>%
+      dplyr::filter(level != "nosig") %>%
+      dplyr::arrange(desc(ord)) %>%
+      head(n = 5)
+    
+    file = paste(path,"/",group,j,"_","DESep2_Volcano_Top5.csv",sep = "")
+    write.csv(x2,file,quote = F)
+    head(x2)
+    
+    p <- ggplot(x1,aes(x =logFC ,y = -log2(p), colour=level)) +
+      geom_point() +
+      geom_hline(yintercept=-log10(0.2),
+                 linetype=4,
+                 color = 'black',
+                 size = 0.5) +
+      geom_vline(xintercept=c(-1,1),
+                 linetype=3,
+                 color = 'black',
+                 size = 0.5) +
+      ggrepel::geom_text_repel(data=x2, aes(x =logFC ,y = -log2(p), label=Genus), size=1) +
+      scale_color_manual(values = c('blue2','red2', 'gray30')) + 
+      ggtitle(group) + theme_bw()
+    
+    p
+    
+    file = paste(path,"/",group,j,"_","DESep2_Volcano.pdf",sep = "")
+    ggsave(file,p,width = 8,height = 6)
+    
+    file = paste(path,"/",group,j,"_","DESep2_Volcano.png",sep = "")
+    ggsave(file,p,width = 8,height = 6)
+    
+    colnames(x) = paste(group,colnames(x),sep = "")
+    
+    
+    if (i ==1) {
+      table =x
+    }
+    if (i != 1) {
+      table = cbind(table,x)
+    }
+  }
+  
+
+  count = as.matrix(count)
+  norm = t(t(count)/colSums(count)) #* 100 # normalization to total 100
+  dim(norm)
+  norm1 = norm %>%
+    t() %>% as.data.frame()
+  # head(norm1)
+  #数据分组计算平均值
+  # library("tidyverse")
+  head(norm1)
+  
+  iris.split <- split(norm1,as.factor(map$Group))
+  iris.apply <- lapply(iris.split,function(x)colMeans(x))
+  # 组合结果
+  iris.combine <- do.call(rbind,iris.apply)
+  norm2= t(iris.combine)
+  
+  #head(norm)
+  str(norm2)
+  norm2 = as.data.frame(norm2)
+  
+  head(norm2)
+  x = cbind(table,norm2)
+  head(x)
+  #在加入这个文件taxonomy时，去除后面两列不相干的列
+  # 读取taxonomy，并添加各列名称
+  
+  if (!is.null(ps@tax_table)) {
+    taxonomy = as.data.frame(ggClusterNet::vegan_tax(ps))
+    head(taxonomy)
+    # taxonomy <- as.data.frame(tax_table(ps1))
+    
+    #发现这个注释文件并不适用于直接作图。
+    #采用excel将其分列处理，并且删去最后一列，才可以运行
+    if (length(colnames(taxonomy)) == 6) {
+      colnames(taxonomy) = c("kingdom","phylum","class","order","family","genus")
+    }else if (length(colnames(taxonomy)) == 7) {
+      colnames(taxonomy) = c("kingdom","phylum","class","order","family","genus","species")
+    }else if (length(colnames(taxonomy)) == 8) {
+      colnames(taxonomy) = c("kingdom","phylum","class","order","family","genus","species","rep")
+    }
+    # colnames(taxonomy) = c("kingdom","phylum","class","order","family","genus")
+    
+    # Taxonomy排序，并筛选OTU表中存在的
+    library(dplyr)
+    taxonomy$id=rownames(taxonomy)
+    # head(taxonomy)
+    tax = taxonomy[row.names(x),]
+    x = x[rownames(tax), ] # reorder according to tax
+    
+    if (length(colnames(taxonomy)) == 7) {
+      x = x[rownames(tax), ] # reorder according to tax
+      x$phylum = gsub("","",tax$phylum,perl=TRUE)
+      x$class = gsub("","",tax$class,perl=TRUE)
+      x$order = gsub("","",tax$order,perl=TRUE)
+      x$family = gsub("","",tax$family,perl=TRUE)
+      x$genus = gsub("","",tax$genus,perl=TRUE)
+      # x$species = gsub("","",tax$species,perl=TRUE)
+    }else if (length(colnames(taxonomy)) == 8) {
+      x$phylum = gsub("","",tax$phylum,perl=TRUE)
+      x$class = gsub("","",tax$class,perl=TRUE)
+      x$order = gsub("","",tax$order,perl=TRUE)
+      x$family = gsub("","",tax$family,perl=TRUE)
+      x$genus = gsub("","",tax$genus,perl=TRUE)
+      x$species = gsub("","",tax$species,perl=TRUE)
+    }else if (length(colnames(taxonomy)) == 9) {
+      x = x[rownames(tax), ] # reorder according to tax
+      x$phylum = gsub("","",tax$phylum,perl=TRUE)
+      x$class = gsub("","",tax$class,perl=TRUE)
+      x$order = gsub("","",tax$order,perl=TRUE)
+      x$family = gsub("","",tax$family,perl=TRUE)
+      x$genus = gsub("","",tax$genus,perl=TRUE)
+      x$species = gsub("","",tax$species,perl=TRUE)
+      
+      
+    }
+    
+  } else {
+    x = x
+  }
+  
+
+
+
+
+
+res = x
+head(res)
+
+filename = paste(diffpath.1,"/","_",j,"_","DESep2_all.csv",sep = "")
+write.csv(res,filename,quote = F)
+
+```
+
+
+### edgeR-Manhattan diagram（edgeR-曼哈顿图）
+
+```{r}
+
+diffpath = paste(otupath,"/diff_Manhattan/",sep = "")
+dir.create(diffpath)
+
+  ps = ps
+  pvalue = 0.05
+  lfc = 0
+  diffpath = diffpath 
+
+
+count = ps %>% 
+    ggClusterNet::vegan_otu() %>%
+    t()
+# create DGE list
+
+  d = edgeR::DGEList(counts=count, group= phyloseq::sample_data(ps)$Group)
+  d = edgeR::calcNormFactors(d)
+  design.mat = model.matrix(~ 0 + d$samples$group)
+  colnames(design.mat)=levels(as.factor(phyloseq::sample_data(ps)$Group))
+  d2 = edgeR::estimateGLMCommonDisp(d, design.mat)
+  d2 = edgeR::estimateGLMTagwiseDisp(d2, design.mat)
+  fit = edgeR::glmFit(d2, design.mat)
+  
+  Desep_group <- as.character(levels(as.factor(phyloseq::sample_data(ps)$Group)))
+  Desep_group
+  
+  aaa = combn(Desep_group,2)
+  
+  for (i in 1:dim(aaa)[2]) {
+    # i = 1
+    Desep_group = aaa[,i]
+    print( Desep_group)
+    group = paste(Desep_group[1],Desep_group[2],sep = "-")
+    group
+    BvsA <- limma::makeContrasts(contrasts =  group,levels=design.mat)#注意是以GF1为对照做的比较
+    # 组间比较,统计Fold change, Pvalue
+    lrt = edgeR::glmLRT(fit,contrast=BvsA)
+    
+    # FDR检验，控制假阳性率小于5%
+    de_lrt = edgeR::decideTestsDGE(lrt, adjust.method="fdr", p.value=pvalue,lfc=lfc)#lfc=0这个是默认值
+    summary(de_lrt)
+    # 导出计算结果
+    x=lrt$table
+    x$sig=de_lrt
+    
+    x$sig=de_lrt
+    head(x)
+    #------差异结果符合otu表格的顺序
+    row.names(count)[1:6]
+    
+    x <- cbind(x, padj = p.adjust(x$PValue, method = "fdr"))
+    enriched = row.names(subset(x,sig==1))
+    depleted = row.names(subset(x,sig==-1))
+    x$level = as.factor(ifelse(as.vector(x$sig) ==1, "enriched",ifelse(as.vector(x$sig)==-1, "depleted","nosig")))
+    x$otu = rownames(x)
+    x$neglogp = -log(x$PValue)
+
+    tax = ps %>% 
+      ggClusterNet::vegan_tax() %>%
+      as.data.frame()
+    head(tax)
+    x = cbind(x,tax)
+    head(x)
+    
+    top_phylum=c("Bacteroidetes","Firmicutes","Planctomycetes","Proteobacteria","Verrucomicrobia")
+    x[!(x$Phylum %in% top_phylum),]$Phylum = "Low Abundance" # no level can get value
+    x$otu = factor(x$otu, levels=x$otu)   # set x order
+    x$level = factor(x$level, levels=c("enriched","depleted","nosig"))
+    levels(x$Phylum)=c(top_phylum,"Low Abundance")
+    x = x %>% arrange(Phylum)
+    head(x)
+    x$otu = factor(x$otu, levels=x$otu)   
+    
+    # if (tem != 0) {
+    #   tem = x[x$neglogp>15,] %>% nrow()
+    # }
+    
+    FDR = min(x$neglogp[x$level=="depleted"])
+    p = ggplot(x, aes(x=otu, y=neglogp, color=Phylum, size=logCPM, shape=level)) +
+      geom_point(alpha=.7) + 
+      geom_hline(yintercept=FDR, linetype=2, color="lightgrey") +
+      scale_shape_manual(values=c(17, 25, 20))+
+      scale_size(breaks=c(5, 10, 15)) +
+      labs(x="OTU", y="-loge(P)") +
+      theme(axis.ticks.x=element_blank(),axis.text.x=element_blank(),legend.position="top") +
+      scale_color_manual(values = c(RColorBrewer::brewer.pal(9,"Set1")))
+    p
+    
+    filename = paste(diffpath,"/",paste(Desep_group[1],Desep_group[2],sep = "_"),"Manhattan_plot.pdf",sep = "")
+    ggsave(filename,p,width = 16,height = 6)
+    filename = paste(diffpath,"/",paste(Desep_group[1],Desep_group[2],sep = "_"),"Manhattan_plot.png",sep = "")
+    ggsave(filename,p,width = 16,height = 6,dpi = 72)
+    
+  }
+
+
+```
+
+### STAMP_difference analysis（STAMP_差异分析）
+
+
+```{r}
+
+ps = readRDS("./data/dataNEW/ps_16s.rds")
+diffpath = paste(otupath,"/stemp_diff/",sep = "")
+dir.create(diffpath)
+
+allgroup <- combn(unique(map$Group),2)
+ps_sub <- phyloseq::subset_samples(ps,Group %in% allgroup[,1]);ps_sub
+Top = 20
+ranks = 6
+method = "TMM"
+test.method = "t.test"
+
+
+#--门水平合并
+data   = ggClusterNet::tax_glom_wt(ps_sub,ranks = phyloseq::rank_names(ps)[ranks]) %>%
+    ggClusterNet::scale_micro(method = method) %>%
+    ggClusterNet::filter_OTU_ps(Top = 200) %>%
+    ggClusterNet::vegan_otu() %>%
+    as.data.frame()
+  tem = colnames(data)
+  data$ID = row.names(data)
+
+  data <- data %>%
+    dplyr::inner_join(as.tibble(phyloseq::sample_data(ps)),by = "ID")
+  data$Group = as.factor(data$Group)
+
+  
+
+  if (test.method == "t.test") {
+    diff <- data[,tem] %>%
+      # dplyr::select_if(is.numeric) %>%
+      purrr::map_df(~ broom::tidy(t.test(. ~ Group,data = data)), .id = 'var')
+
+  } else if(test.method == "wilcox.test"){
+    diff <- data[,tem] %>%
+      # dplyr::select_if(is.numeric) %>%
+      purrr::map_df(~ broom::tidy(wilcox.test(. ~ Group,data = data)), .id = 'var')
+    
+  }
+  
+  diff$p.value[is.nan(diff$p.value)] = 1
+  diff$p.value <- p.adjust(diff$p.value,"bonferroni")
+  tem = diff$p.value [diff$p.value < 0.05] %>% length()
+  if (tem > 30) {
+    diff <- diff %>% 
+      dplyr::filter(p.value < 0.05) %>%
+      head(30)
+  } else {
+    diff <- diff %>% 
+      # filter(p.value < 0.05) %>%
+      head(30)
+  }
+  
+  # diff <- diff %>% filter(p.value < 0.05)
+
+  # diff1$p.value <- p.adjust(diff1$p.value,"bonferroni")
+  # diff1 <- diff1 %>% filter(p.value < 0.05)
+  
+  abun.bar <- data[,c(diff$var,"Group")] %>%
+    tidyr::gather(variable,value,-Group) %>%
+    dplyr::group_by(variable,Group) %>%
+    dplyr::summarise(Mean = mean(value))
+  
+  
+  diff.mean <- diff[,c("var","estimate","conf.low","conf.high","p.value")]
+  diff.mean$Group <- c(ifelse(diff.mean$estimate >0,levels(data$Group)[1],
+                              levels(data$Group)[2]))
+  diff.mean <- diff.mean[order(diff.mean$estimate,decreasing = TRUE),]
+  
+  
+  cbbPalette <- c("#E69F00", "#56B4E9")
+  abun.bar$variable <- factor(abun.bar$variable,levels = rev(diff.mean$var))
+  
+  
+  p1 <- ggplot(abun.bar,aes(variable,Mean,fill = Group)) +
+    scale_x_discrete(limits = levels(diff.mean$var)) +
+    coord_flip() +
+    xlab("") +
+    ylab("Mean proportion (%)") +
+    theme(panel.background = element_rect(fill = 'transparent'),
+          panel.grid = element_blank(),
+          axis.ticks.length = unit(0.4,"lines"),
+          axis.ticks = element_line(color='black'),
+          axis.line = element_line(colour = "black"),
+          axis.title.x=element_text(colour='black', size=12,face = "bold"),
+          axis.text=element_text(colour='black',size=10,face = "bold"),
+          legend.title=element_blank(),
+          # legend.text=element_text(size=12,face = "bold",colour = "black",
+          #                          margin = margin(r = 20)),
+          legend.position = c(-1,-0.1),
+          legend.direction = "horizontal",
+          legend.key.width = unit(0.8,"cm"),
+          legend.key.height = unit(0.5,"cm"))
+  
+  p1
+  
+  for (i in 1:(nrow(diff.mean) - 1))
+    p1 <- p1 + annotate('rect', xmin = i+0.5, xmax = i+1.5, ymin = -Inf, ymax = Inf,
+                        fill = ifelse(i %% 2 == 0, 'white', 'gray95'))
+  
+  p1
+  p1 <- p1 +
+    geom_bar(stat = "identity",position = "dodge",width = 0.7,colour = "black") +
+    scale_fill_manual(values=cbbPalette) + theme(legend.position = "bottom")
+  p1
+  
+  diff.mean$var <- factor(diff.mean$var,levels = levels(abun.bar$variable))
+  diff.mean$p.value <- signif(diff.mean$p.value,3)
+  diff.mean$p.value <- as.character(diff.mean$p.value)
+  
+  p2 <- ggplot(diff.mean,aes(var,estimate,fill = Group)) +
+    theme(panel.background = element_rect(fill = 'transparent'),
+          panel.grid = element_blank(),
+          axis.ticks.length = unit(0.4,"lines"),
+          axis.ticks = element_line(color='black'),
+          axis.line = element_line(colour = "black"),
+          axis.title.x=element_text(colour='black', size=12,face = "bold"),
+          axis.text=element_text(colour='black',size=10,face = "bold"),
+          axis.text.y = element_blank(),
+          legend.position = "none",
+          axis.line.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          plot.title = element_text(size = 15,face = "bold",colour = "black",hjust = 0.5)) +
+    scale_x_discrete(limits = levels(diff.mean$var)) +
+    coord_flip() +
+    xlab("") +
+    ylab("Difference in mean proportions (%)") +
+    labs(title="95% confidence intervals")
+  
+  for (i in 1:(nrow(diff.mean) - 1))
+    p2 <- p2 + annotate('rect', xmin = i+0.5, xmax = i+1.5, ymin = -Inf, ymax = Inf,
+                        fill = ifelse(i %% 2 == 0, 'white', 'gray95'))
+  
+  p2 <- p2 +
+    geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
+                  position = position_dodge(0.8), width = 0.5, size = 0.5) +
+    geom_point(shape = 21,size = 3) +
+    scale_fill_manual(values=cbbPalette) +
+    geom_hline(aes(yintercept = 0), linetype = 'dashed', color = 'black')
+  
+  p3 <- ggplot(diff.mean,aes(var,estimate,fill = Group)) +
+    geom_text(aes(y = 0,x = var),label = diff.mean$p.value,
+              hjust = 0,fontface = "bold",inherit.aes = FALSE,size = 3) +
+    geom_text(aes(x = nrow(diff.mean)/2 +0.5,y = 0.85),label = "P-value (corrected)",
+              srt = 90,fontface = "bold",size = 5) +
+    coord_flip() +
+    ylim(c(0,1)) +
+    theme(panel.background = element_blank(),
+          panel.grid = element_blank(),
+          axis.line = element_blank(),
+          axis.ticks = element_blank(),
+          axis.text = element_blank(),
+          axis.title = element_blank())
+  
+  
+  library(patchwork)
+  p <- p1 + p2 + p3 + plot_layout(widths = c(4,6,2))
+  p
+  i = 1
+# filename = paste(diffpath,"/",paste(allgroup[,i][1],allgroup[,i][2],sep = "_"),"stemp_P_plot.csv",sep = "")
+# write.csv(diff.mean,filename)
+filename = paste(diffpath,"/",paste(allgroup[,i][1],
+                                        allgroup[,i][2],sep = "_"),phyloseq::rank.names(ps)[j],"stemp_plot.pdf",sep = "")
+ggsave(filename,p,width = 14,height = 6)
+    
+filename = paste(diffpath,"/",paste(allgroup[,i][1],
+                                        allgroup[,i][2],sep = "_"),phyloseq::rank.names(ps)[j],"stemp_plot.jpg",sep = "")
+ggsave(filename,p,width = 14,height = 6)
+detach("package:patchwork")
+
+```
+
+
+### Heatmap + Bubble diagram （热图+气泡图）
+
+
+```{r}
+ps = readRDS("./data/dataNEW/ps_16s.rds")
+
+heatpath = paste(otupath,"/heapmap_boplot/",sep = "")
+dir.create(heatpath)
+
+map = phyloseq::sample_data(ps)
+map$ID = row.names(map)
+phyloseq::sample_data(ps) = map
+j = 2
+ps_tem = ps %>% 
+    ggClusterNet::scale_micro(method = "TMM") %>%
+    ggClusterNet::tax_glom_wt(ranks = j) 
+
+rowSD = function(x){
+    apply(x,1, sd)
+  }
+  
+rowCV = function(x){
+    rowSD(x)/rowMeans(x)
+  }
+  
+id <- ps %>% 
+    ggClusterNet::scale_micro(method = "TMM") %>%
+    ggClusterNet::tax_glom_wt(ranks = j) %>%
+    ggClusterNet::filter_OTU_ps(100) %>%
+    ggClusterNet::vegan_otu() %>%
+    t() %>% as.data.frame() %>%rowCV %>%
+    sort(decreasing = TRUE) %>%
+    head(20) %>%
+    names()
+  
+
+ps_rela= ps_tem
+heatnum = 20
+label=TRUE
+col_cluster=TRUE
+row_cluster=TRUE
+
+
+  map = phyloseq::sample_data(ps_rela)
+  map$ID = row.names(map)
+  phyloseq::sample_data(ps_rela) = map
+  otu = as.data.frame(t(ggClusterNet::vegan_otu(ps_rela)))
+  otu = as.matrix(otu[id,])
+  ps_heatm = phyloseq::phyloseq(
+    phyloseq::otu_table(otu,taxa_are_rows = TRUE),
+    phyloseq::tax_table(ps_rela),
+    phyloseq::sample_data(ps_rela)
+    
+  )
+  
+  # print(ps_heatm)
+  datah <- as.data.frame(t(ggClusterNet::vegan_otu(ps_heatm)))
+  head(datah) 
+  tax = as.data.frame(ggClusterNet::vegan_tax(ps_heatm))
+  
+  otutaxh = cbind(datah,tax)
+  head(otutaxh)
+  
+  otutaxh$id = paste(row.names(otutaxh),otutaxh$Genus,sep = "_")
+  # otutaxh$id  = row.names(otutaxh)
+  row.names(otutaxh) = otutaxh$id 
+  
+  
+  data <- otutaxh[,c("id",phyloseq::sample_names(ps))]
+
+  rig <- data[,phyloseq::sample_names(ps)] %>% rowMeans() %>% as.data.frame()
+  head(rig)
+  colnames(rig) = "MeanAbundance"
+  rig$id = row.names(rig)
+  rig = rig %>% dplyr::arrange(MeanAbundance)
+  rig$id = factor(rig$id,levels = rig$id)
+  p_rig = ggplot(rig) + geom_bar(aes(y = id,x = MeanAbundance),
+                                 fill = "#A54657",
+                                 stat = "identity") + theme_void()
+  
+  tem = data[,phyloseq::sample_names(ps)] %>% as.matrix()
+  
+   tem = scale(t(tem)) %>% t() %>% 
+     as.data.frame()
+   data[,phyloseq::sample_names(ps)] = tem
+   
+   
+   
+  # data[data > 0.3]<-0.3
+  mat <- data[,-1] #drop gene column as now in rows
+  
+  if (col_cluster ==  TRUE) {
+    clust <- hclust(dist(mat %>% as.matrix())) # hclust with distance matrix
+    ggtree_plot <- ggtree::ggtree(clust)
+  }
+  if (row_cluster ==  TRUE) {
+    v_clust <- hclust(dist(mat %>% as.matrix() %>% t()))
+    ggtree_plot_col <- ggtree::ggtree(v_clust) + ggtree::layout_dendrogram()
+  }
+  
+  if (label ==  TRUE) {
+    map = as.data.frame(phyloseq::sample_data(ps))
+    map$ID = row.names(map)
+    labels= ggplot(map, aes(x = ID, y=1, fill=Group)) + geom_tile() +
+      scale_fill_brewer(palette = 'Set1',name="Cell Type") +
+      theme_void()
+  }
+  
+  map = phyloseq::sample_data(ps) %>% as.tibble() %>%
+    dplyr::arrange(Group) %>% as.data.frame()
+  map$ID
+  pcm = reshape2::melt(data, id = c("id"))
+  pcm$variable = factor(pcm$variable,levels = map$ID)
+  pcm$id = factor(pcm$id,levels = rig$id)
+  
+  
+  p1 = ggplot(pcm, aes(y = id, x = variable)) + 
+    # geom_point(aes(size = value,fill = value), alpha = 0.75, shape = 21) + 
+    geom_tile(aes(size = value,fill = value))+
+    scale_size_continuous(limits = c(0.000001, 100), range = c(2,25), breaks = c(0.1,0.5,1)) + 
+    labs( y= "", x = "", size = "Relative Abundance (%)", fill = "")  + 
+    # scale_fill_manual(values = colours, guide = FALSE) + 
+    scale_x_discrete(limits = rev(levels(pcm$variable)))  + 
+    scale_y_discrete(position = "right") +
+    scale_fill_gradientn(colours =colorRampPalette(RColorBrewer::brewer.pal(11,"Spectral")[11:1])(60))+
+    theme(
+      panel.background=element_blank(),
+      panel.grid=element_blank(),
+      axis.text.x = element_text(colour = "black",angle = 90)
+      
+    )
+  
+  colours = c( "#A54657",  "#582630", "#F7EE7F", "#4DAA57","#F1A66A","#F26157", "#F9ECCC", "#679289", "#33658A",
+               "#F6AE2D","#86BBD8")
+  #----样本在y轴上
+  p2 = ggplot(pcm, aes(y = id, x = variable)) + 
+    geom_point(aes(size = value,fill = value), alpha = 0.75, shape = 21) + 
+    scale_size_continuous(limits = c(0.000001, 100), range = c(2,25), breaks = c(0.1,0.5,1)) + 
+    labs( y= "", x = "", size = "Relative Abundance (%)", fill = "")  + 
+    # scale_fill_manual(values = colours, guide = FALSE) + 
+    scale_x_discrete(limits = rev(levels(pcm$variable)))  + 
+    scale_y_discrete(position = "right")  +
+    scale_fill_gradientn(colours =colorRampPalette(RColorBrewer::brewer.pal(11,"Spectral")[11:1])(60)) +
+     theme(
+      panel.background=element_blank(),
+      panel.grid=element_blank(),
+      axis.text.x = element_text(colour = "black",angle = 90)
+      
+      )
+
+  p1 <- p1  %>%
+    aplot::insert_right(p_rig, width=.2) 
+  p2 <- p2  %>%
+    aplot::insert_right(p_rig, width=.2) 
+  if (col_cluster ==  TRUE) {
+    p1 <- p1  %>%
+      aplot::insert_left(ggtree_plot, width=.2)
+    p2 <- p2  %>%
+      aplot::insert_left(ggtree_plot, width=.2)
+  }
+
+  if (row_cluster ==  TRUE) {
+    p1 <- p1  %>%
+      aplot::insert_top(labels, height=.02) 
+    p2 <- p2  %>%
+      aplot::insert_top(labels, height=.02) 
+  }
+  
+  if (label ==  TRUE) {
+    p1 <- p1  %>%
+      aplot::insert_top(ggtree_plot_col, height=.1)
+    p2 <- p2  %>%
+      aplot::insert_top(ggtree_plot_col, height=.1)
+  }
+
+
+  filename = paste(heatpath,"/",phyloseq::rank.names(ps)[j],"Topggheatmap.pdf",sep = "")
+  ggsave(filename,p1,width = 14,height = (6 + heatnum/10))
+  
+  filename = paste(heatpath,phyloseq::rank.names(ps)[j],"Topggbubble.pdf",sep = "")
+  ggsave(filename,p2,width = 14,height = (6 + heatnum/10))
+  
+  filename = paste(heatpath,"/",phyloseq::rank.names(ps)[j],"Topggheatmap.png",sep = "")
+  ggsave(filename,p1,width = 14,height = (6 + heatnum/10))
+  
+  filename = paste(heatpath,phyloseq::rank.names(ps)[j],"Topggbubble.png",sep = "")
+  ggsave(filename,p2,width = 14,height = (6 + heatnum/10))
+  
+
+
+```
+
+
+### Multi-group difference analysis volcano plot（多组差异分析火山图）
+
+
+```{r}
+# BiocManager::install("MetBrewer")
+
+
+diffpath.1 = paste(otupath,"/Mui.Group.v/",sep = "")
+dir.create(diffpath.1)
+
+source("./function/EdgerSuper2.R")
+res = EdgerSuper2 (ps = ps,group  = "Group",artGroup =NULL,
+                   j = "OTU",
+                   path = diffpath.1
+)
+
+head(res)
+
+
+  res$ID = row.names(res)
+  datv = res 
+  # for循环挑选每个cluster的top前5 gene symbol
+  tm.g <- function(data){
+    id = data$group %>% unique()
+    
+    for (i in 1:length(id)) {
+      tem = filter(data,group==id[i],level != "nosig") %>% 
+        distinct(ID,.keep_all = TRUE) %>% 
+        top_n(5,abs(logFC))
+      if (i == 1) {
+        tem2 = tem
+      } else {
+        tem2 = rbind(tem2,tem)
+      }
+    }
+    return(tem2)
+  }
+  
+  top <- tm.g(datv)
+  # 先画背景柱，根据数据log2FC的max值,min值来确定
+  #根据数据中log2FC区间确定背景柱长度：
+  
+  head(datv)
+  
+  tem = datv %>% group_by(group) %>% summarise(max = max(logFC),min = min(logFC)) %>% as.data.frame()
+  
+  col1<-data.frame(x=tem$group,
+                   y=tem$max)
+  col2<-data.frame(x=tem$group,
+                   y=tem$min)
+  # 绘制背景柱
+  p1 <- ggplot()+
+    geom_col(data = col1,
+             mapping = aes(x = x,y = y),
+             fill = "#dcdcdc",alpha = 0.6)+
+    geom_col(data = col2,
+             mapping = aes(x = x,y = y),
+             fill = "#dcdcdc",alpha = 0.6)
+  p1
+  
+  
+  
+  #把散点火山图叠加到背景柱上：
+  head(datv)
+  
+  p2 <- ggplot()+
+    geom_col(data = col1,
+             mapping = aes(x = x,y = y),
+             fill = "#dcdcdc",alpha = 0.6)+
+    geom_col(data = col2,
+             mapping = aes(x = x,y = y),
+             fill = "#dcdcdc",alpha = 0.6)+
+    geom_jitter(data = datv,
+                aes(x =group , y = logFC, color =level ),
+                size = 1,
+                width =0.4)+
+    scale_color_manual(name=NULL,
+                       values = c("#4393C3","#FC4E2A","grey40"))+
+    labs(x="",y="log2(FoldChange)")
+  p2
+  
+  # 添加X轴的分组色块标签：
+  dfcol<-data.frame(x=tem$group,
+                    y=0,
+                    label=tem$group)
+  # 添加分组色块标签
+  dfcol$group <- tem$group
+  # 加载包
+  library(RColorBrewer)
+  library(MetBrewer)
+  # BiocManager::install("MetBrewer")
+  # 自定义分组色块的颜色
+  tile_color <- met.brewer("Thomas",length(tem$group))
+  
+  # 在图中镶嵌色块
+  p3 <- p2 + geom_tile(data = dfcol,
+                       aes(x=x,y=y),
+                       height=1.75,
+                       color = "black",
+                       fill = tile_color,
+                       alpha = 0.6,
+                       show.legend = F)+
+    geom_text(data=dfcol,
+              aes(x=x,y=y,label=group),
+              size =3.5,
+              color ="white") + theme_classic()
+  p3
+  
+  library(ggrepel)
+  p4<-p3+geom_text_repel(
+    data=top,
+    aes(x=group,y=logFC,label=ID),
+    force = 1.2,
+    arrow = arrow(length = unit(0.008, "npc"),
+                  type = "open", ends = "last"))
+  p4
+  # 去除背景，美化图片
+  p5 <- p4+
+    theme_minimal()+
+    theme(
+      axis.title = element_text(size = 18,
+                                color = "black",
+                                face = "bold"),
+      axis.line.y = element_line(color = "black",
+                                 size = 1.2),
+      axis.line.x = element_blank(),
+      axis.text.x = element_blank(),
+      panel.grid = element_blank(),
+      legend.position = "top",
+      legend.direction = "vertical",
+      legend.justification = c(1,0),
+      legend.text = element_text(size = 12)
+    )
+  p5
+
+# return(list(p5,p3,datv,top))
+p = p3
+p
+filename = paste(diffpath.1,"/","Mui.group.volcano.pdf",sep = "")
+ggsave(filename,p,width = 12,height = 6,limitsize = FALSE)
+
+
+
+```
+
+
+## 3.Biomarker identification （3.生物标志物鉴别）
+
+
+### LEfSe analysis（LEfSe分析）
+
+
+```{r}
+
+lefsepath = paste(otupath,"/lefse_R_plot/",sep = "")
+dir.create(lefsepath)
+
+ps = readRDS("./data/dataNEW/ps_16s.rds")
+library(ggtree)
+
+p_base = function(ps,Top = 100,ranks = 6) {
+  alltax = ps %>%
+    ggClusterNet::tax_glom_wt(ranks = ranks ) %>%
+    ggClusterNet::filter_OTU_ps(Top) %>%
+    ggClusterNet::vegan_tax() %>%
+    as.data.frame()
+  alltax$OTU = row.names(alltax)
+  alltax$Kingdom = paste(alltax$Kingdom,sep = "_Rank_")
+  for (i in 2:ranks) {
+    alltax[,i]= paste(alltax[,i - 1],alltax[,i],sep = "_Rank_")
+    
+  }
+  
+  alltax[is.na(alltax)] = "Unknown"
+  trda <- MicrobiotaProcess::convert_to_treedata(alltax)
+  
+  p <- ggtree(trda, layout="circular", size=0.2, xlim=c(30,NA)) +
+    geom_point(
+      pch = 21,
+      size=3,
+      alpha=1,
+      fill = "#FFFFB3"
+    )
+  p$data$lab2 <- p$data$label %>% strsplit( "_Rank_") %>%
+    sapply(
+      function(x) x[length(x)]
+    )
+  p$data$lab2   = gsub("st__","",p$data$lab2 )
+  p$data$nodeSize = 1
+  return(p)
+}
+
+
+LDA_Micro = function(ps = ps,
+                     Top = 100,
+                     ranks = 6,
+                     p.lvl = 0.05,
+                     lda.lvl = 2,
+                     seed = 11,
+                     adjust.p = F
+){
+  
+  
+  alltax = ps %>%
+    ggClusterNet::tax_glom_wt(ranks = ranks ) %>%
+    phyloseq::filter_taxa(function(x) sum(x ) > 0 , TRUE) %>%
+    ggClusterNet::filter_OTU_ps(Top) %>%
+    ggClusterNet::vegan_tax() %>%
+    as.data.frame()
+  alltax$OTU = row.names(alltax)
+  
+
+  
+  alltax$Kingdom = paste(alltax$Kingdom,sep = "_Rank_")
+  for (i in 2:ranks) {
+    alltax[,i]= paste(alltax[,i - 1],alltax[,i],sep = "_Rank_")
+    
+  }
+  
+  otu = ps %>%
+    ggClusterNet::tax_glom_wt(ranks = ranks ) %>%
+    phyloseq::filter_taxa(function(x) sum(x ) > 0 , TRUE) %>%
+    ggClusterNet::filter_OTU_ps(Top) %>%
+    ggClusterNet::vegan_otu() %>%
+    t() %>%
+    as.data.frame()
+  
+  otu_tax = merge(otu,alltax,by = "row.names",all = F)
+  head(otu_tax)
+  
+  tem = colnames(alltax)[-length(colnames(alltax))]
+  i = 1
+  tem2 = c("k__","p__","c__","o__","f__","g__","s__","st__")
+  for (i in 1:ranks) {
+    rank1 <- otu_tax %>%
+      dplyr::group_by(!!sym(tem[i])) %>%
+      dplyr::summarise_if(is.numeric, sum, na.rm = TRUE)
+    colnames(rank1)[1] = "id"
+    rank1$id = paste(tem2[i],rank1$id,sep = "")
+    if (i == 1) {
+      all = rank1
+    }
+    
+    if (i != 1) {
+      all = rbind(all,rank1)
+    }
+  }
+  
+  
+  #--LDA排序#--------
+  data1 = as.data.frame(all)
+  row.names(data1) = data1$id
+  data1$id = NULL
+  
+  #-构建phylose对象
+ 
+  ps_G_graphlan = phyloseq::phyloseq(phyloseq::otu_table(as.matrix(data1),taxa_are_rows = TRUE), 
+                                     phyloseq::sample_data(ps))#   %>% filter_taxa(function(x) sum(x ) > 0 , TRUE)
+  ps_G_graphlan 
+
+  #----提取OTU表格
+  
+  otu = as.data.frame((ggClusterNet::vegan_otu(ps_G_graphlan)))
+
+  
+  map = as.data.frame(phyloseq::sample_data(ps_G_graphlan))
+  # otu = (otu_table)
+  claslbl= map$Group %>% as.factor()
+  set.seed(seed)
+  #KW rank sum test
+  
+  rawpvalues <- apply(otu, 2, function(x) kruskal.test(x, claslbl)$p.value);
+  #--得到计算后得到的p值
+  ord.inx <- order(rawpvalues)
+  rawpvalues <- rawpvalues[ord.inx]
+  clapvalues <- p.adjust(rawpvalues, method ="fdr")
+  # p.adjust
+  wil_datadf <- as.data.frame(otu[,ord.inx])
+
+  ldares <- MASS::lda(claslbl ~ .,data = wil_datadf)
+  # ldares
+  ldamean <- as.data.frame(t(ldares$means))
+  ldamean 
+  class_no <<- length(unique(claslbl))
+  ldamean$max <- apply(ldamean[,1:class_no],1,max);
+  ldamean$min <- apply(ldamean[,1:class_no],1,min);
+  #---计算LDA
+  ldamean$LDAscore <- signif(log10(1+abs(ldamean$max-ldamean$min)/2),digits=3);
+  head(ldamean)
+  
+  a = rep("A",length(ldamean$max))
+  for (i in 1:length(ldamean$max)) {
+    name =colnames(ldamean[,1:class_no])
+    a[i] = name[ldamean[,1:class_no][i,] %in% ldamean$max[i]]
+  }
+  ldamean$class = a
+  
+  tem1 = row.names(ldamean)
+  tem1 %>% as.character()
+  ldamean$Pvalues <- signif(rawpvalues[match(row.names(ldamean),names(rawpvalues))],digits=5)
+  ldamean$FDR <- signif(clapvalues,digits=5)
+  resTable <- ldamean
+  rawNms <- rownames(resTable);
+  rownames(resTable) <- gsub("`", '', rawNms);
+  
+  
+  if (adjust.p) {
+    de.Num <- sum(clapvalues <= p.lvl & ldamean$LDAscore>=lda.lvl)
+    
+  } else {
+    de.Num <- sum(rawpvalues <= p.lvl & ldamean$LDAscore>=lda.lvl)
+  }
+  
+  if(de.Num == 0){
+    current.msg <<- "No significant features were identified with given criteria.";
+  }else{
+    current.msg <<- paste("A total of", de.Num, "significant features with given criteria.")
+  }
+  print(current.msg)
+  # sort by p value
+  ord.inx <- order(resTable$Pvalues, resTable$LDAscore)
+  resTable <- resTable[ord.inx, ,drop=FALSE]
+  resTable <- resTable[,c(ncol(resTable),1:(ncol(resTable)-1))]
+  resTable <- resTable[,c(ncol(resTable),1:(ncol(resTable)-1))]
+  ldamean$Pvalues[is.na(ldamean$Pvalues)] = 1
+  # resTable %>% tail()
+  if (adjust.p) {
+    taxtree = resTable[clapvalues <=p.lvl & ldamean$LDAscore>=lda.lvl,]
+  } else {
+    # taxtree = resTable[ldamean$Pvalues <=p.lvl & ldamean$LDAscore>=lda.lvl,]
+    taxtree = resTable[ldamean$Pvalues <=p.lvl,]
+  }
+  
+  #-提取所需要的颜色
+  colour = c('darkgreen','red',"blue","#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF")
+  selececol = colour[1:length(levels(as.factor(taxtree$class)))]
+  names(selececol) = levels(as.factor(taxtree$class))
+  A = rep("a",length(row.names(taxtree)))
+  
+  for (i in 1:length(row.names(taxtree))) {
+    A[i] = selececol [taxtree$class[i]]
+  }
+  
+  taxtree$color = A
+  # taxtree <- taxtree[row.names(taxtree) != "k__Bacteria",]
+  # node_ids <- p0$data  
+  # anno <- rep("white", nrow(p1$data))
+  
+  lefse_lists = data.frame(node=row.names(taxtree),
+                           color=A,
+                           Group = taxtree$class,
+                           stringsAsFactors = FALSE
+  )
+  
+  
+  return(list(lefse_lists,taxtree))
+}
+
+
+# gtree = p1
+# anno.data= tablda[[1]]
+# alpha=0.3
+# anno.depth = 2
+library(patchwork)
+
+clade.anno_wt <- function(gtree, anno.data, alpha = 0.2, anno.depth = 5, anno.x = 10, 
+                          anno.y = 40){
+  short.labs <- c(letters,paste(letters,1:500,sep = ""))
+  get_offset <- function(x) {
+    (x * 0.2 + 0.2)^2
+  }
+  get_angle <- function(node) {
+    data <- gtree$data
+    sp <- tidytree::offspring(data, node)$node
+    sp2 <- c(sp, node)
+    sp.df <- data[match(sp2, data$node), ]
+    mean(range(sp.df$angle))
+  }
+  
+  
+  anno.data <- dplyr::arrange(anno.data, node)
+  hilight.color <- anno.data$color
+  node_list <- anno.data$node
+  node_ids <- (gtree$data %>% filter(label %in% node_list) %>% 
+                 arrange(label))$node
+  anno <- rep("yellow", nrow(gtree$data))
+  
+  #---添加阴影#-------
+  i = 1
+  for (i in 1:length(node_ids)) {
+    n <- node_ids[i]
+    color <- hilight.color[i]
+    anno[n] <- color
+    mapping <- gtree$data %>% filter(node == n)
+    nodeClass <- as.numeric(mapping$nodeDepth)
+    offset <- get_offset(nodeClass)
+    gtree <- gtree + geom_hilight(node = n, fill = color, 
+                                  alpha = alpha, extend = offset)
+  }
+  # gtree$layers <- rev(gtree$layers)
+  # gtree <- gtree + geom_point2(aes(size = I(nodeSize)), fill = anno, 
+  #                              shape = 21)
+  short.labs.anno <- NULL
+  i = 1
+  # gtree$data
+  
+  
+  #--添加标签#--------
+  for (i in 1:length(node_ids)) {
+    n <- node_ids[i]
+    mapping <- gtree$data %>% filter(node == n)
+    nodeClass <- as.numeric(mapping$nodeDepth)
+    if (nodeClass <= anno.depth) {
+      lab <- short.labs[1]
+      short.labs <- short.labs[-1]
+      if (is.null(short.labs.anno)) {
+        short.labs.anno = data.frame(lab = lab, annot = mapping$lab2, 
+                                     stringsAsFactors = F)
+      }else {
+        short.labs.anno = rbind(short.labs.anno, c(lab,mapping$lab2))
+      }
+    } else {
+      lab <- mapping$lab2
+    }
+    
+    offset <- get_offset(nodeClass) - 0.4
+    angle <- get_angle(n) + 90
+    gtree <- gtree + geom_cladelabel(node = n, label = lab, 
+                                     
+                                     angle = angle, fontsize = 1 + sqrt(nodeClass), 
+                                     offset = offset, barsize = NA, hjust = 0.5)
+  }
+  
+  if (!is.null(short.labs.anno)) {
+    anno_shapes = sapply(short.labs.anno$lab, utf8ToInt)
+    stable.p <- ggpubr::ggtexttable(short.labs.anno, rows = NULL, 
+                                    theme = ggpubr::ttheme(
+                                      colnames.style = ggpubr::colnames_style(fill = "white"),
+                                      tbody.style = ggpubr::tbody_style(fill = ggpubr::get_palette("RdBu", 6))
+                                    ))
+    
+  } 
+  
+  
+  y = (1:length(unique(anno.data$Group)))
+  
+  pleg <- ggplot() + geom_point2(aes(
+    y = y,
+    x = rep(1,length(unique(anno.data$color))),fill = as.factor(1:length(unique(anno.data$Group)))
+  ),pch = 21,size = 2) +
+    geom_text(aes(  y = y,
+                    x = rep(1,length(unique(anno.data$color))),label = unique(anno.data$Group) ),
+              hjust = -1
+    ) + scale_fill_manual(values = unique(anno.data$color),guide = F) +
+    theme_void()
+  layout <- "
+  AAAAAABB#
+  AAAAAABB#
+  AAAAAABBC
+  AAAAAABBC
+  AAAAAABB#
+  "
+  
+  
+  if (is.null(short.labs.anno)) {
+    gtree <- gtree + pleg + plot_layout(design = layout)
+  } else {
+    gtree <- gtree + stable.p+ pleg + plot_layout(design = layout)
+  }
+  
+}
+
+lefse_bar = function(taxtree = tablda[[2]]){
+  taxtree = tablda[[2]]
+  taxtree$ID = row.names(taxtree)
+  head(taxtree)
+  taxtree$ID = gsub("_Rank_",";",taxtree$ID)
+  taxtree <- taxtree %>%
+    arrange(class,LDAscore)
+  taxtree$ID = factor(taxtree$ID,levels=taxtree$ID)
+  taxtree$class = factor(taxtree$class,levels = unique(taxtree$class))
+  
+  pbar <- ggplot(taxtree) + geom_bar(aes(y =ID, x = LDAscore,fill = class),stat = "identity") +
+    scale_fill_manual(values = unique(taxtree$color)) + mytheme1 +
+    scale_x_continuous(limits = c(0,max(taxtree$LDAscore)*1.2))
+}
+
+
+for (j in 2:4) {
+  
+  p1 <- p_base(ps,Top = 200,ranks =j)
+  p1
+  
+  tablda = LDA_Micro(ps = ps,
+                     Top = 200,
+                     ranks = j,
+                     p.lvl = 0.05,
+                     lda.lvl = 2,
+                     seed = 11,
+                     adjust.p = F)
+  
+  p2 <- clade.anno_wt(p1, tablda[[1]], alpha=0.3,anno.depth = 2)
+  p2
+  FileName <- paste(lefsepath,j,"_tree_lefse", ".pdf", sep = "")
+  ggsave(FileName,p2,width = 15,height = 10)
+  FileName <- paste(lefsepath,j,"_tree_lefse", ".png", sep = "")
+  ggsave(FileName,p2,width = 15,height = 10)
+  p <- lefse_bar(taxtree = tablda[[2]])
+  FileName <- paste(lefsepath,j,"_bar_lefse", ".pdf", sep = "")
+  ggsave(FileName, p, width = 15, height =9)
+  
+  FileName <- paste(lefsepath,j,"_bar_lefse", ".png", sep = "")
+  ggsave(FileName, p, width = 15, height =9)
+  
+  res = tablda[[2]]
+  FileName <- paste(lefsepath,j,"_tree_lefse_data", ".csv", sep = "")
+  write.csv(res,FileName,quote = F)
+}
+
+
+```
+
+### Machine learning（机器学习）
+
+
+### Microbial communities + Science article- Chart combination（微生物群落和环境Science组合图表）
+
+```{r echo=TRUE}
+ps = base::readRDS("./data/dataNEW/ps_16s.rds")
+env = read.csv("./data/dataNEW/env.csv")
+head(env)
+envRDA = env
+head(env)
+row.names(envRDA) = env$ID
+envRDA$ID = NULL
+head(envRDA)
+
+compath = paste(res1path,"/Conbine_env_plot/",sep = "")
+dir.create(compath)
+
+otu1 = as.data.frame(t(ggClusterNet::vegan_otu(ps)))
+head(otu1)
+
+tabOTU1 = list(bac = otu1)
+
+# tabOTU1 = list(b = otu)
+# tabOTU1 = list(f = otu2)
+
+p0 <- ggClusterNet:: MatCorPlot(env.dat = envRDA,
+                 tabOTU = tabOTU1,
+                 diag = FALSE,
+                 range = 0.1,
+                 numpoint = 21,
+                 sig = TRUE,
+                 siglabel = FALSE,
+                 shownum = FALSE,
+                 curvature = 0.1,
+                 numsymbol = NULL,
+                 lacx = "left",
+                 lacy = "bottom",
+                 p.thur = 0.05,
+                 onlysig = TRUE
+)
+p0
+
+p0 <- p0 + scale_colour_manual(values = c("blue","red")) + 
+  scale_fill_distiller(palette="PRGn")
+p0
+
+FileName <- paste(compath,"Conbine_envplot", ".pdf", sep = "")
+ggsave(FileName, p0,width = 15,height = 10)# , device = cairo_pdf, family = "Song"
+
+FileName <- paste(compath,"Conbine_envplot", ".png", sep = "")
+ggsave(FileName, p0,width = 15,height = 10)# , device = cairo_pdf, family = "Song"
+
+
+
+#--拆分开来
+#--- mantel test
+rep = ggClusterNet::MetalTast (env.dat = envRDA, tabOTU = tabOTU1,distance = "bray",method = "metal")
+repR = rep[c(-seq(from=1,to=dim(rep)[2],by=2)[-1])]
+repP = rep[seq(from=1,to=dim(rep)[2],by=2)]
+head( repR)
+head( repP)
+mat = cbind(repR,repP)
+head(mat)
+
+FileName <- paste(compath,"Conbine_envplot_data", ".csv", sep = "")
+write.csv(mat,FileName)
+
+
+result <- ggClusterNet::Miccorplot(data = envRDA,
+                     method.cor = "spearman",
+                     cor.p = 0.05,
+                     x = F,
+                     y = F,
+                     diag = T,
+                     lacx = "left",
+                     lacy = "bottom",
+                     sig = T,
+                     siglabel = F,
+                     shownum = F,
+                     numpoint = 21,
+                     numsymbol = NULL
+)
+
+p1 <- result[[1]]
+p1 <- p1 + scale_fill_distiller(palette="PRGn")
+p1
+FileName <- paste(compath,"envCorplot", ".pdf", sep = "")
+ggsave(FileName, p1,width = 15,height = 10)
+FileName <- paste(compath,"envCorplot", ".png", sep = "")
+ggsave(FileName, p1,width = 15,height = 10)
+
+```
+

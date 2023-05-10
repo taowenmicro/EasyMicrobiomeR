@@ -1,5 +1,5 @@
 ---
-title: "The best practice"
+title: "Using R in microbial analysis-2"
 author: "Tao Wen(文涛)"
 date: "`r Sys.Date()`"
 output:
@@ -19,17 +19,23 @@ output:
   pdf_document:
     toc: yes
     toc_depth: '3'
-editor_options: 
-  chunk_output_type: console
 ---
 
-
-
 ```{r setup, include = FALSE}
+path <- './'
 knitr::opts_chunk$set(
-  collapse = T, echo=T, comment="#>", message=F, warning=F,
-	fig.align="center", fig.width=7, fig.height=5, dpi=150)
+  collapse = TRUE, 
+  echo=TRUE,
+  comment="#>", 
+  message=FALSE,
+  warning=FALSE,
+	fig.align="center",
+  fig.width=7,
+  fig.height=5,
+  dpi=150)
+knitr::opts_knit$set(root.dir = path)
 ```
+
 
 
 
@@ -148,6 +154,10 @@ colset2 <- RColorBrewer::brewer.pal(12,"Paired")
 colset3 <- c(RColorBrewer::brewer.pal(11,"Set1"),RColorBrewer::brewer.pal(9,"Pastel1"))
 colset4 = colset3
 
+
+ps = ps0
+
+
 #--提取有多少个分组#-----------
 gnum = phyloseq::sample_data(ps)$Group %>% unique() %>% length()
 gnum
@@ -194,6 +204,10 @@ if (Tax4Fun) {
 
 }
 
+#-构建保存路径
+otupath = paste(res1path,"/OTU/",sep = "");otupath
+dir.create(otupath)
+
 ```
 
 ### Output basic information table（基础信息表格输出）
@@ -201,8 +215,7 @@ if (Tax4Fun) {
 
 ```{r}
 
-otupath = paste(res1path,"/OTU/",sep = "");otupath
-dir.create(otupath)
+
 
 #--基本表格保存#----------
 tabpath = paste(otupath,"/report_table/",sep = "")
@@ -266,7 +279,8 @@ dir.create(alppath)
 
 #---------多种指标alpha多样性分析加出图-标记显著性
   group = "Group"
-
+# 设定排序顺序
+axis_order =  phyloseq::sample_data(ps)$Group %>%unique();axis_order
 
   samplesize = min(phyloseq::sample_sums(ps))
   if (samplesize == 0) {
@@ -279,19 +293,19 @@ dir.create(alppath)
   
   mapping = phyloseq::sample_data(ps11)
   ps11 = phyloseq::filter_taxa(ps11, function(x) sum(x ) >0 , TRUE); ps11
-  head(mapping)
+  # head(mapping)
   colnames(mapping) = gsub(group,"AA", colnames(mapping))
   
   mapping$Group = mapping$AA
   mapping$Group = as.factor(mapping$Group)
-  mapping$Group 
+  # mapping$Group 
 
   count = as.data.frame(t(ggClusterNet::vegan_otu(ps11)))
 
   alpha=vegan::diversity(count, "shannon")
   
   x = t(count) ##转置，行为样本，列为OTU
-  head(x)
+  # head(x)
 
   Shannon = vegan::diversity(x)  ##默认为shannon
   Shannon
@@ -305,15 +319,13 @@ dir.create(alppath)
   #多样性指标：均匀度Pielou_evenness，Simpson_evenness
   Pielou_evenness <- Shannon/log(S)
   Simpson_evenness <- Inv_Simpson/S
-  
   est <- vegan::estimateR(x)
   est <- vegan::estimateR(x)
   Richness <- est[1, ]
   Chao1 <- est[2, ]
   ACE <- est[4, ]
-  
   report = cbind(Shannon, Inv_Simpson, Pielou_evenness, Simpson_evenness,
-                 Richness, Chao1,ACE) #不同列进行合并
+                 Richness, Chao1,ACE) 
   head(report)
   
   alp = merge(mapping,report , by="row.names",all=F)
@@ -321,12 +333,12 @@ dir.create(alppath)
 index = c("Shannon","Inv_Simpson","Pielou_evenness","Simpson_evenness" ,"Richness" ,"Chao1","ACE" )
 #--多种组合alpha分析和差异分析出图
 index= alp
-head(index)
+# head(index)
 
 #--提取三个代表指标作图
 sel = c(match("Shannon",colnames(index)),match("Richness",colnames(index)),match("Pielou_evenness",colnames(index)))
 data = cbind(data.frame(ID = 1:length(index$Group),group = index$Group),index[sel])
-head(data)
+# head(data)
 
 result = EasyStat::MuiaovMcomper2(data = data,num = c(3:5))
 
@@ -723,7 +735,7 @@ if (method == "t-sne") {
 
   dim(data)
   map = as.data.frame(sample_data(ps1_rela))
-  row.names(map)
+  # row.names(map)
   #---------tsne
   # install.packages("Rtsne")
   # library(Rtsne)
@@ -826,8 +838,6 @@ if (method %in% c("t-sne")) {
   eig = NULL
 }
 
-# 返回结果：标准图，数据，标签图，成对比较结果，整体结果
-# return(list(p2,points,p3,pairResult,title1,eig))
 
 
 
@@ -869,8 +879,7 @@ if (method %in% c("t-sne")) {
   segs <- merge(plotdata, setNames(cent, c('Group','oNMDS1','oNMDS2')),
                 by = 'Group', sort = FALSE)
   
-  # p2$layers[[2]] = NULL
-   # library(ggcor)
+
   library(ggsci)
   p3_3 = p3_1 +geom_segment(data = segs,
                             mapping = aes(xend = oNMDS1, yend = oNMDS2,color = Group),show.legend=F) + # spiders
@@ -887,7 +896,7 @@ if (method %in% c("t-sne")) {
   ggsave(FileName1 , p3_3, width = 8, height = 8)
 
 
-map
+# map
 
 #提取总体比较
 TResult = title1
@@ -976,8 +985,6 @@ nrow = 2
   
   dat = data.frame(name,R_mantel,p_mantel,R_pro,p_pro )
   pp  = ggpubr::ggarrange(plotlist = plots, common.legend = TRUE, legend="right",ncol = ncol,nrow = nrow)
-
-  # return(list(dat,pp))
 
 
 mytheme1 = theme_classic() + theme(
@@ -1324,13 +1331,10 @@ remove_rankID = function(taxtab){
     )
   
   
-  # return(list(p0,p1,p2,p3,p4,p5,p1_1,p5_1))
 
 library(ggClusterNet)
 barpath = paste(otupath,"/phy_tree_micro/",sep = "");print(barpath)
 dir.create(barpath)
-
-# rank.names(ps)
 
 
 p6 = p1_1
@@ -2277,7 +2281,7 @@ N = 0.5
   if (length(names(ven3)) == 2) {
     filename3 = paste(path,"ven_",paste(names(ven3),sep = "",collapse="-"),".pdf",sep = "",collapse="_")
     pdf(file=filename3,width = 12, height = 8)
-    T<- VennDiagram::venn.diagram(ven3,
+    a<- VennDiagram::venn.diagram(ven3,
                     filename=NULL,
                     lwd=2,#圈线粗度
                     lty=1, #圈线类型
@@ -2294,11 +2298,11 @@ N = 0.5
                     alpha = 0.5,#透明度
                     reverse=TRUE,
                     scaled     = FALSE)
-    grid.draw(T)
+    grid.draw(a)
     dev.off()
     filename33 = paste(path,"ven",".jpg",sep = "",collapse="_")
     jpeg(file=filename33)
-    grid.draw(T)
+    grid.draw(a)
     dev.off();
     
     
@@ -2308,7 +2312,7 @@ N = 0.5
   } else if (length(names(ven3)) == 3) {
     filename3 = paste(path,"ven_",paste(names(ven3),sep = "",collapse="-"),".pdf",sep = "",collapse="_")
     pdf(file=filename3,width = 18, height = 15)
-    T<- VennDiagram::venn.diagram(ven3,
+    a<- VennDiagram::venn.diagram(ven3,
                     filename=NULL,
                     lwd=2,#圈线粗度
                     lty=1, #圈线类型
@@ -2325,17 +2329,17 @@ N = 0.5
                     alpha = 0.5,#透明度
                     reverse=TRUE,
                     scaled     = FALSE)
-    grid::grid.draw(T)
+    grid::grid.draw(a)
     dev.off()
     filename33 = paste(path,"ven",".jpg",sep = "",collapse="_")
     jpeg(file=filename33)
-    grid::grid.draw(T)
+    grid::grid.draw(a)
     dev.off()
-    grid::grid.draw(T)
+    grid::grid.draw(a)
   } else if (length(names(ven3)) == 4) {
     filename3 = paste(path,"ven_",paste(names(ven3),sep = "",collapse="-"),".pdf",sep = "",collapse="_")
     pdf(file=filename3,width = 18, height = 15)
-    T<-VennDiagram::venn.diagram(ven3,
+    a<-VennDiagram::venn.diagram(ven3,
                     filename=NULL,
                     lwd=2,#圈线粗度
                     lty=1, #圈线类型
@@ -2352,17 +2356,17 @@ N = 0.5
                     alpha = 0.5,#透明度
                     reverse=TRUE,
                     scaled     = FALSE)
-    grid::grid.draw(T)
+    grid::grid.draw(a)
     dev.off()
     filename33 = paste(path,"ven",".jpg",sep = "",collapse="_")
     jpeg(file=filename33)
-    grid::grid.draw(T)
+    grid::grid.draw(a)
     dev.off()
-    grid::grid.draw(T)
+    grid::grid.draw(a)
   }else if (length(names(ven3)) == 5) {
     filename3 = paste(path,"ven_",paste(names(ven3),sep = "",collapse="-"),".pdf",sep = "",collapse="_")
     pdf(file=filename3,width = 12, height = 12)
-    T<- VennDiagram::venn.diagram(ven3,
+    a<- VennDiagram::venn.diagram(ven3,
                     filename=NULL,
                     lwd=2,#圈线粗度
                     lty=1, #圈线类型
@@ -2379,13 +2383,13 @@ N = 0.5
                     alpha = 0.5,#透明度
                     reverse=TRUE,
                     scaled     = FALSE)
-    grid::grid.draw(T)
+    grid::grid.draw(a)
     dev.off()
     filename33 = paste(path,"ven",".jpg",sep = "",collapse="_")
     jpeg(file=filename33)
-    grid::grid.draw(T)
+    grid::grid.draw(a)
     dev.off()
-    grid::grid.draw(T)
+    grid::grid.draw(a)
   }else if (length(names(ven3)) == 6) {
     
     print("ven not use for more than 6")
@@ -4909,7 +4913,7 @@ detach("package:igraph")
   for (i in 1:dim(conbgroup)[2]) {
     a = conbgroup[,i]
     map = as.data.frame(sample_data(ps))
-    head(map)
+    # head(map)
     
     chose1 = map[as.matrix(map[,group]) %>% as.vector() == a[1],] %>% row.names()
     chose2 = map[as.matrix(map[,group]) %>% as.vector() == a[2],] %>% row.names()
@@ -4988,35 +4992,41 @@ detach("package:igraph")
 
 ```{r}
 
-# funcpath = paste(otupath,"/Tax4Fun2/",sep = "")
-# dir.create(funcpath)
+source("./function/runRefBlast2.R")
+funcpath = paste(otupath,"/Tax4Fun2/",sep = "")
+dir.create(funcpath)
 
-# 首先配置数据库
-## buildReferenceData(path_to_working_directory = '.', use_force = FALSE, install_suggested_packages = TRUE)
-# path_to_reference_data = "./Tax4Fun2_ReferenceData_v2"
+library(Tax4Fun2)
 
 
-# otudir = funcpath
-# #加载
-# library(Tax4Fun2)
-# #物种注释
-# #指定 OTU 代表序列、Tax4Fun2 库的位置、参考数据库版本、序列比对（blastn）线程数等
-# runRefBlast(path_to_otus = './data/otu.fa', 
-#             path_to_reference_data = path_to_reference_data, 
-#             path_to_temp_folder = otudir, database_mode = 'Ref100NR', 
-#             use_force = TRUE, num_threads = 4)
-# 
-# 
-# #预测群落功能
-# #指定 OTU 丰度表、Tax4Fun2 库的位置、参考数据库版本、上步的物种注释结果路径等
-# makeFunctionalPrediction(path_to_otu_table = './data/otu.txt',
-#                          path_to_reference_data = path_to_reference_data, 
-#                          path_to_temp_folder = otudir, 
-#                          database_mode = 'Ref100NR', 
-#                          normalize_by_copy_number = TRUE,
-#                          min_identity_to_reference = 0.97, 
-#                          normalize_pathways = FALSE)
+# # 首先配置数据库-可能会经常失败，建议使用这里的备份库
+# buildReferenceData(path_to_working_directory = '.', use_force = FALSE, install_suggested_packages = TRUE)
+path_to_reference_data = "./Tax4Fun2/Tax4Fun2_ReferenceData_v2"
 
+# blast_bin = file.path(path_to_reference_data, "blast_bin/bin/blastn.exe")
+# res = system(command = paste(blast_bin, "-help"), intern = T)
+
+otudir = funcpath
+
+#加载
+library(Tax4Fun2)
+#物种注释
+#指定 OTU 代表序列、Tax4Fun2 库的位置、参考数据库版本、序列比对（blastn）线程数等
+runRefBlast2(path_to_otus = './data/otu.fa',
+            path_to_reference_data = path_to_reference_data,
+            path_to_temp_folder = otudir, database_mode = 'Ref100NR',
+            use_force = TRUE, num_threads = 4)
+
+
+#预测群落功能
+#指定 OTU 丰度表、Tax4Fun2 库的位置、参考数据库版本、上步的物种注释结果路径等
+makeFunctionalPrediction(path_to_otu_table = './data/otu.txt',
+                         path_to_reference_data = path_to_reference_data,
+                         path_to_temp_folder = otudir,
+                         database_mode = 'Ref100NR',
+                         normalize_by_copy_number = TRUE,
+                         min_identity_to_reference = 0.97,
+                         normalize_pathways = FALSE)
 
 ```
 
@@ -5455,7 +5465,15 @@ fit<-lapply(1:num,dmn,count=count,verbose=TRUE)#lapply函数调用函数dmn，�
 
 ### Microbial communities + Science article- Chart combination（微生物群落和环境Science组合图表）
 
-```{r}
+```{r echo=TRUE}
+ps = base::readRDS("./data/dataNEW/ps_16s.rds")
+env = read.csv("./data/dataNEW/env.csv")
+head(env)
+envRDA = env
+head(env)
+row.names(envRDA) = env$ID
+envRDA$ID = NULL
+head(envRDA)
 
 compath = paste(res1path,"/Conbine_env_plot/",sep = "")
 dir.create(compath)
@@ -5463,8 +5481,7 @@ dir.create(compath)
 otu1 = as.data.frame(t(ggClusterNet::vegan_otu(ps)))
 head(otu1)
 
-tabOTU1 = list(bac = otu1
-               )
+tabOTU1 = list(bac = otu1)
 
 # tabOTU1 = list(b = otu)
 # tabOTU1 = list(f = otu2)
@@ -6060,7 +6077,9 @@ for (j in 2:6) {
 
 
 ```{r}
-
+library(phyloseq)
+library(ggClusterNet)
+library(tidyverse)
 env = read.csv("./data/dataNEW/env.csv")
 head(env)
 envRDA = env
@@ -6308,7 +6327,7 @@ ps.merge <- ggClusterNet::merge16S_ITS(ps16s = ps16s,
                          N16s = 200)
 
 map =  phyloseq::sample_data(ps.merge)
-head(map)
+# head(map)
 
 map$Group = "one"
 
@@ -6651,7 +6670,7 @@ ps.merge
 
 
 map =  phyloseq::sample_data(ps.merge)
-head(map)
+# head(map)
 map$Group = "one"
 phyloseq::sample_data(ps.merge) <- map
 
@@ -6730,7 +6749,7 @@ ps.merge
 
 map =  phyloseq::sample_data(ps.merge)
 
-head(map)
+# head(map)
 map$Group = "one"
 phyloseq::sample_data(ps.merge) <- map
 
@@ -6824,7 +6843,7 @@ ps.merge <- merge16S_ITS(ps16s = ps16s,
 ps.merge
 
 map =  phyloseq::sample_data(ps.merge)
-head(map)
+# head(map)
 
 map$Group = "one"
 phyloseq::sample_data(ps.merge) <- map
@@ -8092,7 +8111,7 @@ bNTIRC = read.csv(paste(phypath,"/6_bNTI_RCbray.csv",sep = ""),row.names = 1)
 head(bNTIRC)
 
 map = sample_data(psphy)
-head(map)
+# head(map)
 plot = EnvCorbNTI(ps = psphy,
                   bNTIRC = bNTIRC,
                   group  = "Group",

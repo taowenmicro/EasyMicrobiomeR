@@ -1,0 +1,43 @@
+<meta charset="utf-8">
+<title>{{pagetitle}}. {{#package}}{{package}} {{version}}{{/package}}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="author" content="{{author}}">
+<meta HTTP-EQUIV="CACHE-CONTROL" CONTENT="NO-CACHE">
+<meta HTTP-EQUIV="PRAGMA" CONTENT="NO-CACHE">
+<link href="css/bootstrap.css" rel="stylesheet">
+<link href="css/bootstrap-responsive.css" rel="stylesheet">
+<link href="css/highlight.css" rel="stylesheet">
+<link href="css/staticdocs.css" rel="stylesheet">
+<link href="css/custom.css" rel="stylesheet">
+
+<!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+<![endif]-->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+<script type="text/javascript"
+  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script type="text/javascript">
+  $(document).ready(function() {
+    var s = $("#sticker");
+    var pos = s.position();                    
+    $(window).scroll(function() {
+        var windowpos = $(window).scrollTop();
+        //s.html("Distance from top:" + pos.top + "<br />Scroll position: " + windowpos);
+        if (windowpos >= pos.top) {
+            s.addClass("stick");
+        } else {
+            s.removeClass("stick"); 
+        }
+    });
+  });
+</script>

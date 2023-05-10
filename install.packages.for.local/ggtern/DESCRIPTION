@@ -1,0 +1,54 @@
+Package: ggtern
+Version: 3.4.1
+Date: 2022-12-6
+Title: An Extension to 'ggplot2', for the Creation of Ternary Diagrams
+Description: Extends the functionality of 'ggplot2', providing the capability
+    to plot ternary diagrams for (subset of) the 'ggplot2' geometries. Additionally,
+    'ggtern' has implemented several NEW geometries which are unavailable to the
+    standard 'ggplot2' release. For further examples and documentation, please
+    proceed to the 'ggtern' website.
+Authors@R: 
+  person("Nicholas","Hamilton", ,"nick@ggtern.com", role = c("aut", "cre"))
+Author: Nicholas Hamilton [aut, cre]
+Maintainer: Nicholas Hamilton <nick@ggtern.com>
+Depends: R (>= 4.0), ggplot2 (>= 3.4.0)
+Imports: compositions (>= 2.0-2), grid, gridExtra (>= 2.3), gtable (>=
+        0.1.2), latex2exp (>= 0.5), MASS, plyr (>= 1.8.3), scales (>=
+        0.3.0), stats, proto (>= 1.0), utils, lattice, hexbin (>=
+        1.28.2), methods
+Enhances: sp
+License: GPL-2 | file LICENSE
+Encoding: UTF-8
+URL: http://www.ggtern.com
+Collate: 'ggtern-package.R' 'aes.R' 'coord-tern.R' 'calc-tern-tlr2xy.R'
+        'calc-mahalanobis-distance.R' 'calc-kde2d-weighted.R'
+        'doc-data.R' 'doc-theme-convenience.R' 'depreciated.R'
+        'labels-new.R' 'labels-percent.R' 'legend-draw-tern.R'
+        'ggtern-constructor.R' 'gg-internal.R'
+        'modifications-gridExtra.R' 'onLoad.R' 'plot.R' 'plot-build.R'
+        'plot-construction.R' 'position-.R' 'position-nudge-tern.R'
+        'position-jitter-tern.R' 'save.R' 'scales-tern.R'
+        'strip-unapproved.R' 'tern-limits.R' 'theme.R'
+        'theme-arrowlength.R' 'theme-clockwise.R' 'theme-defaults.R'
+        'theme-elements.R' 'theme-gridsontop.R' 'theme-bordersontop.R'
+        'theme-legend-position.R' 'theme-latex.R' 'theme-mesh.R'
+        'theme-noarrows.R' 'theme-nomask.R' 'theme-novar-tern.R'
+        'theme-rotate.R' 'theme-showgrid.R' 'theme-showlabels.R'
+        'theme-ticks.R' 'theme-showtitles.R' 'theme-ticksoutside.R'
+        'theme-zoom.R' 'utilities.R' 'utilities-help.R'
+        'geom-density-tern.R' 'stat-density-tern.R' 'geom-mask.R'
+        'geom-Xline.R' 'geom-Xisoprop.R' 'geom-confidence-tern.R'
+        'stat-confidence-tern.R' 'geom-errorbarX.R'
+        'geom-smooth-tern.R' 'stat-smooth-tern.R' 'geom-mean-ellipse.R'
+        'stat-mean-ellipse.R' 'geom-interpolate-tern.R'
+        'stat-interpolate-tern.R' 'stat-interpolate-methods.R'
+        'geom-crosshair-tern.R' 'geom-point-swap.R' 'geom-hex-tern.R'
+        'stat-hex-tern.R' 'annotation-tern.R'
+        'annotation-raster-tern.R' 'geom-text-viewport.R'
+        'geom-label-viewport.R' 'geom-polygon-closed.R'
+        'geom-tri-tern.R' 'stat-tri-tern.R'
+NeedsCompilation: no
+Repository: CRAN
+RoxygenNote: 7.2.2
+Packaged: 2022-12-05 23:57:00 UTC; nick
+Date/Publication: 2022-12-06 03:10:02 UTC

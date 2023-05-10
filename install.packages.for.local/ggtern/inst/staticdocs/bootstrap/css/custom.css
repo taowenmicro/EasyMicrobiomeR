@@ -1,0 +1,68 @@
+@import url(http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,700italic,300,400,700);
+@import url(http://fonts.googleapis.com/css?family=Lobster:400);
+
+p {
+	font-family: 'Open Sans', sans-serif !important;
+	text-align:justify!important;
+}
+
+body p {
+	font-weight: 300;
+}
+
+#header h1, #header h2 {
+	font-size: 38px !important;
+}
+
+h1,h1.title {
+	font-family: 'lobster', 'Open Sans', sans-serif !important;
+}
+
+h1, h1.title {
+	font-size: 28pt !important;
+	line-height: 1.4;
+}
+
+h2,h3,h4,h5,h6 {
+	font-family: 'Open Sans', sans-serif;
+}
+h3,h4,h5,h6 {
+	font-weight: 300 !important;
+}
+h2 {
+	font-size: 22pt !important;
+	font-weight: 400!important;
+}
+h3 {
+	font-size: 18pt !important;
+}
+h4 {
+	font-size: 14pt !important;
+}
+h5 {
+	font-size: 13pt !important;
+}
+h6 {
+	font-size: 12pt !important;
+}
+
+
+div#sideBar {
+}
+.clear { 
+    clear:both; 
+}
+div#aboveSticker{
+  margin-bottom:10px;
+}
+div#sticker {
+  padding-top:0px;
+}
+.stick {
+    position:fixed;
+    top:0px;
+}
+
+.p>.img{
+  width:auto!important;
+}

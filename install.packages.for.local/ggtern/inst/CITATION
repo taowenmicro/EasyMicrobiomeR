@@ -1,0 +1,17 @@
+bibentry(bibtype = "Article",
+  title        = "{ggtern}: Ternary Diagrams Using {ggplot2}",
+  author       = c(person(given = c("Nicholas", "E."),
+                          family = "Hamilton",
+                          email = "nick@ggtern.com"),
+                   person(given = "Michael",
+                          family = "Ferry")),
+  journal      = "Journal of Statistical Software, Code Snippets",
+  year         = "2018",
+  volume       = "87",
+  number       = "3",
+  pages        = "1--17",
+  doi          = "10.18637/jss.v087.c03",
+
+  header       = "To cite ggtern in publications use:"
+)
+
